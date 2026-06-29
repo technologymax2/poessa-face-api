@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import * as faceapi from 'face-api.js';
 
 function FaceMatch({ data }) {
   const [matchResult, setMatchResult] = useState("⏳ የፊት ማነጻጸሪያ እየተካሄደ ነው...");
@@ -8,11 +7,20 @@ function FaceMatch({ data }) {
   useEffect(() => {
     const runMatch = async () => {
       try {
+        // የCDN ስክሪፕቱ በ index.html ስላለ window.faceapiን እንጠቀማለን
+        const faceapi = window.faceapi;
+
         // 1. መታወቂያ ላይ ያለውን ፊት ለመለየት ፎቶውን እንደ ምስል መጫን
         const imgID = await faceapi.fetchImage(data.idPhotoUrl);
-        const detectionID = await faceapi.detectSingleFace(imgID).withFaceLandmarks().withFaceDescriptor();
+        
+        // 2. ፊቱን መለየት
+        const detectionID = await faceapi
+          .detectSingleFace(imgID)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
 
-        // 2. Selfie ላይ ያለውን Descriptor ከዳታ (Props) መጠቀም
+        // 3. Selfie ላይ ያለውን Descriptor ከዳታ (Props) መጠቀም
+        // descriptorArray ን ወደ Float32Array መቀየር ያስፈልጋል
         const descriptorSelfie = new Float32Array(data.descriptor);
 
         if (!detectionID) {
@@ -20,7 +28,7 @@ function FaceMatch({ data }) {
           return;
         }
 
-        // 3. የርቀት መለኪያ (Euclidean Distance)
+        // 4. የርቀት መለኪያ (Euclidean Distance)
         const distance = faceapi.euclideanDistance(detectionID.descriptor, descriptorSelfie);
         
         // 0.6 ወይም ከዚያ በታች ከሆነ አንድ ሰው ናቸው
@@ -32,6 +40,7 @@ function FaceMatch({ data }) {
           setMatchResult("❌ ማረጋገጫ አልተሳካም! ፊቶቹ አይመሳሰሉም።");
         }
       } catch (err) {
+        console.error(err);
         setMatchResult("⚠️ ስህተት ተፈጥሯል፡ " + err.message);
       }
     };
@@ -45,7 +54,14 @@ function FaceMatch({ data }) {
       <div style={{ fontSize: "20px", fontWeight: "bold", color: isMatch ? "green" : "red" }}>
         {matchResult}
       </div>
-      {isMatch && <button onClick={() => alert("ሂደቱ ተጠናቋል!")}>ወደ ዋናው ገጽ</button>}
+      {isMatch && (
+        <button 
+          onClick={() => window.location.reload()} 
+          style={{ marginTop: "20px", padding: "10px 20px" }}
+        >
+          ወደ ዋናው ገጽ ተመለስ
+        </button>
+      )}
     </div>
   );
 }
