@@ -2,37 +2,43 @@
 
 const mongoose = require("mongoose");
 
-const PensionerSchema = new mongoose.Schema(
+const pensionerSchema = new mongoose.Schema(
   {
     pensionerId: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     nameAmh: {
       type: String,
       required: true,
+      trim: true,
     },
 
     nameEng: {
       type: String,
       required: true,
+      trim: true,
     },
 
     tin: {
       type: String,
       default: "",
+      trim: true,
     },
 
     phone: {
       type: String,
       required: true,
+      trim: true,
     },
 
     age: {
       type: Number,
       required: true,
+      min: 18,
     },
 
     gender: {
@@ -45,68 +51,66 @@ const PensionerSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     poessaBranch: {
       type: String,
       required: true,
+      trim: true,
     },
 
     bankNameAmh: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
     },
 
     bankNameEng: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
     },
 
     bankBranch: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
     },
 
     pensionAmount: {
       type: Number,
-      required: true,
+      default: 0,
     },
 
     addressAmh: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
     },
 
     addressEng: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
     },
 
     issueDate: {
       type: Date,
-      required: true,
     },
 
     expiryDate: {
       type: Date,
-      required: true,
     },
 
-    // Registration photo
     image: {
       type: String,
       required: true,
     },
 
-    // Verification information
     verified: {
       type: Boolean,
       default: false,
-    },
-
-    verificationDate: {
-      type: Date,
-      default: null,
     },
 
     faceMatched: {
@@ -119,19 +123,30 @@ const PensionerSchema = new mongoose.Schema(
       default: false,
     },
 
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastVerificationImage: {
+      type: String,
+      default: "",
+    },
+
     verificationAttempts: {
       type: Number,
       default: 0,
     },
 
-    lastSelfie: {
+    status: {
       type: String,
-      default: "",
-    }
+      enum: ["ACTIVE", "INACTIVE"],
+      default: "ACTIVE",
+    },
   },
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model("Pensioner", PensionerSchema);
+module.exports = mongoose.model("Pensioner", pensionerSchema);
