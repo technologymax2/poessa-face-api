@@ -17,8 +17,8 @@ async function createAdmin() {
     await User.create({
       firstName: "System",
       lastName: "Administrator",
-      username: "admin",
-      email: "admin@poessa.gov.et",
+      username: "AdminMamex",
+      email: "Admin@poessa.com",
       phone: "0911111111",
       password: "Admin@123",
       role: "admin",
