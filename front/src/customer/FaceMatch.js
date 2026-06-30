@@ -1,17 +1,30 @@
 import React, { useEffect, useState } from 'react';
 
-function FaceMatch({ data }) {
+function FaceMatch({ data, onSuccess }) {
   const [result, setResult] = useState("⏳ በማወዳደር ላይ...");
 
   useEffect(() => {
     const runMatch = async () => {
-      const imgID = await window.faceapi.fetchImage(data.idPhotoUrl);
-      const detection = await window.faceapi.detectSingleFace(imgID).withFaceLandmarks().withFaceDescriptor();
-      const dist = window.faceapi.euclideanDistance(detection.descriptor, new Float32Array(data.descriptor));
-      setResult(dist < 0.6 ? "✅ ስኬታማ! ተመሳስለዋል" : "❌ አይመሳሰሉም");
+      try {
+        const idImg = await window.faceapi.fetchImage(data.idPhotoUrl);
+        const idDetection = await window.faceapi.detectSingleFace(idImg).withFaceDescriptor();
+        const selfieDescriptor = new Float32Array(data.descriptor);
+
+        if (idDetection) {
+          const distance = window.faceapi.euclideanDistance(idDetection.descriptor, selfieDescriptor);
+          if (distance < 0.6) {
+            setResult("✅ ስኬታማ! ተመሳስለዋል።");
+            onSuccess();
+          } else {
+            setResult("❌ አይመሳሰሉም።");
+          }
+        }
+      } catch (e) {
+        setResult("⚠️ ስህተት ተፈጥሯል");
+      }
     };
     runMatch();
-  }, [data]);
+  }, [data, onSuccess]);
 
   return <h3>{result}</h3>;
 }
