@@ -37,7 +37,7 @@ const Login = () => {
       setLoading(true);
 
       const response = await axios.post(
-        "http://localhost:10000/api/auth/login",
+        "CLIENT_URL.api/auth/login",
         formData
       );
 
