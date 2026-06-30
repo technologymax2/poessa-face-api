@@ -1,9 +1,7 @@
-// models/User.js
-
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema(
+const faceUserSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
@@ -66,11 +64,8 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-/**
- * Hash password before saving
- * Compatible with Mongoose v8
- */
-userSchema.pre("save", async function () {
+// Hash password before saving
+faceUserSchema.pre("save", async function () {
 
   if (!this.isModified("password")) {
     return;
@@ -82,16 +77,11 @@ userSchema.pre("save", async function () {
 
 });
 
-/**
- * Compare passwords
- */
-userSchema.methods.matchPassword = async function (enteredPassword) {
+// Compare password
+faceUserSchema.methods.matchPassword = async function (enteredPassword) {
 
-  return await bcrypt.compare(
-    enteredPassword,
-    this.password
-  );
+  return bcrypt.compare(enteredPassword, this.password);
 
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("FaceUser", faceUserSchema);
