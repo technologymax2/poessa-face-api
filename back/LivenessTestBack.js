@@ -8,7 +8,7 @@ const { canvas, Canvas, Image, ImageData } = require("canvas");
 faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 
 const UserPensioner = require("./models/UserPensioner");
-const LivenessVerification = require("./models/livenessSchema");
+const LivenessVerification = require("./models/Pensioner");
 
 const IMGBB_API_KEY = "ebd592608f4dba1e8271bec8e920c408";
 

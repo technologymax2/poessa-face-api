@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config(); // .env ፋይልን ለመጠቀም
-const Pensioner = require('./models/livenessSchema');
+const Pensioner = require('./models/Pensioner');
 
 const app = express();
 app.use(cors());
