@@ -1,12 +1,6 @@
-// middleware/authMiddleware.js
-
 const jwt = require("jsonwebtoken");
 const FaceUser = require("../models/FaceUser");
 
-/**
- * Protect Routes
- * Verify JWT and attach user to request
- */
 const protect = async (req, res, next) => {
   try {
     let token;
@@ -27,7 +21,7 @@ const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id).select("-password");
+    const user = await FaceUser.findById(decoded.id).select("-password");
 
     if (!user) {
       return res.status(401).json({
@@ -54,15 +48,6 @@ const protect = async (req, res, next) => {
   }
 };
 
-/**
- * Role Authorization
- *
- * Example:
- * router.post("/register",
- * protect,
- * authorize("admin","operator"),
- * controller);
- */
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
