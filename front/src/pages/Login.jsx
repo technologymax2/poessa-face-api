@@ -26,40 +26,27 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!formData.username || !formData.password) {
-      alert("Please enter your username and password.");
-      return;
-    }
+  setLoading(true);
 
-    try {
-      setLoading(true);
+  // Temporary login (development only)
+  localStorage.setItem("token", "temporary-token");
 
-      const response = await axios.post(
-        "CLIENT_URL.api/auth/login",
-        formData
-      );
+  localStorage.setItem(
+    "user",
+    JSON.stringify({
+      username: formData.username || "admin",
+      role: "admin",
+    })
+  );
 
-      localStorage.setItem("token", response.data.token);
+  alert("Temporary login successful.");
 
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+  setLoading(false);
 
-      alert("Login successful.");
-
-      navigate("/dashboard");
-
-    } catch (error) {
-      console.error(error);
-
-      alert(
-        error.response?.data?.message ||
-        "Invalid username or password."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  navigate("/dashboard");
+};
 
   return (
     <>
