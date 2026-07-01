@@ -1,11 +1,9 @@
-
 // src/services/api.js
 
 import axios from "axios";
 
-// Change this when deploying
 const API = axios.create({
-  baseURL: "http://localhost:10000/api",
+  baseURL: process.env.REACT_APP_API_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -36,7 +34,6 @@ export const login = (data) =>
 // Pensioner
 // ==============================
 
-// Register Pensioner
 export const registerPensioner = (formData) =>
   API.post("/pensioners/register", formData, {
     headers: {
@@ -44,23 +41,18 @@ export const registerPensioner = (formData) =>
     },
   });
 
-// Get All Pensioners
 export const getPensioners = () =>
   API.get("/pensioners");
 
-// Get One Pensioner
 export const getPensioner = (id) =>
   API.get(`/pensioners/${id}`);
 
-// Search Pensioner
 export const searchPensioner = (search) =>
   API.get(`/pensioners/search?search=${search}`);
 
-// Update Pensioner
 export const updatePensioner = (id, data) =>
   API.put(`/pensioners/${id}`, data);
 
-// Delete Pensioner
 export const deletePensioner = (id) =>
   API.delete(`/pensioners/${id}`);
 
@@ -69,7 +61,7 @@ export const deletePensioner = (id) =>
 // ==============================
 
 export const verifyPensioner = (formData) =>
-  API.post("/verify", formData, {
+  API.post("/verification/verify", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -82,9 +74,4 @@ export const verifyPensioner = (formData) =>
 export const getDashboardStats = () =>
   API.get("/dashboard/stats");
 
-// ==============================
-// Export Axios Instance
-// ==============================
-
 export default API;
-
