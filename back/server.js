@@ -1,20 +1,18 @@
 // server.js
-
 require("dotenv").config();
-
 const mongoose = require("mongoose");
 const app = require("./app");
 
 const PORT = process.env.PORT || 10000;
+let server; // Store the server instance here
 
-// Connect to MongoDB
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-
     console.log("✅ MongoDB Connected");
 
-    app.listen(PORT, () => {
+    // Assign the server instance
+    server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 http://localhost:${PORT}`);
     });
@@ -28,14 +26,21 @@ const connectDB = async () => {
 
 connectDB();
 
-// Handle unhandled promise rejections
-process.on("unhandledRejection", (err) => {
-  console.error("Unhandled Rejection:", err.message);
-  process.exit(1);
-});
+// A reusable function to close the server gracefully
+const handleFatalError = (type, err) => {
+  console.error(`❌ ${type}:`, err.message || err);
+  
+  if (server) {
+    // Stops the server from accepting new connections but finishes existing ones
+    server.close(() => {
+      console.log("💤 Server closed. Exiting process...");
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+};
 
-// Handle uncaught exceptions
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err.message);
-  process.exit(1);
-});
+// Listeners updated to use the graceful shutdown function
+process.on("unhandledRejection", (err) => handleFatalError("Unhandled Rejection", err));
+process.on("uncaughtException", (err) => handleFatalError("Uncaught Exception", err));

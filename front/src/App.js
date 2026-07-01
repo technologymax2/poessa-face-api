@@ -1,7 +1,5 @@
-// src/App.js
-
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom"; // Link እዚህ ጋር ተጨምሯል
 
 // Pages
 import Home from "./pages/Home";
@@ -24,44 +22,30 @@ function App() {
 
         {/* Protected Routes */}
         <Route element={<PrivateRoute />}>
-
-          <Route
-            path="/register"
-            element={<Register />}
-          />
-
-          <Route
-            path="/verify"
-            element={<Verify />}
-          />
-
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
-
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify" element={<Verify />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Route>
 
         {/* 404 Page */}
         <Route
           path="*"
           element={
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-              <div className="text-center">
-                <h1 className="text-6xl font-bold text-red-600">
-                  404
-                </h1>
-
-                <p className="text-2xl mt-4">
-                  Page Not Found
-                </p>
-
-                <a
-                  href="/"
-                  className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+              <div className="text-center bg-white p-8 rounded-xl shadow-md max-w-md w-full">
+                <h1 className="text-6xl font-bold text-red-600">404</h1>
+                <p className="text-2xl mt-4 font-semibold text-gray-800">Page Not Found</p>
+                <p className="text-gray-500 mt-2">The page you are looking for doesn't exist or has been moved.</p>
+                
+                {/* እዚህ ጋር የነበረው <a> ታግ ወደ <Link> ተቀይሯል 
+                  ይህም ገጹ ያለ ምንም መቆራረጥ (No Page Reload) በፍጥነት እንዲቀየር ያደርጋል
+                */}
+                <Link
+                  to="/"
+                  className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
                 >
                   Go Home
-                </a>
+                </Link>
               </div>
             </div>
           }
@@ -73,4 +57,3 @@ function App() {
 }
 
 export default App;
-
