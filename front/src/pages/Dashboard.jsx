@@ -21,7 +21,7 @@ const Dashboard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setPensioners(res.data);
+      setPensioners(res.data.data || []);;
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Failed to load pensioners.");
