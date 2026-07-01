@@ -2,85 +2,120 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
-import { login } from "../services/api"; // የአዲሱ ሰርቪስ ጥሪ
 
 const Login = () => {
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ username: "", password: "" });
+
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      setLoading(true);
-      
-      const res = await login(formData);
-      
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      
-      alert("Login successful.");
-      navigate("/dashboard");
-    } catch (error) {
-      console.error(error);
-      // ለዴቨሎፕመንት ብቻ፡ ባክኤንድ ካልሰራ ጊዜያዊ ቶክን መጠቀም እንዲቻል
-      if (process.env.NODE_ENV === "development") {
-        localStorage.setItem("token", "temporary-token");
-        localStorage.setItem("user", JSON.stringify({ username: formData.username || "admin", role: "admin" }));
-        navigate("/dashboard");
-      } else {
-        alert(error.response?.data?.message || "Login failed.");
-      }
-    } finally {
+
+    setLoading(true);
+
+    // Simulate loading
+    setTimeout(() => {
+      // Save fake token
+      localStorage.setItem("token", "temporary-token");
+
+      // Save fake logged-in user
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          username: formData.username || "admin",
+          firstName: "Temporary",
+          lastName: "User",
+          role: "admin",
+        })
+      );
+
       setLoading(false);
-    }
+
+      alert("Login Successful");
+
+      navigate("/dashboard");
+    }, 800);
   };
 
   return (
     <>
       <Navbar />
-      {loading && <Loader fullScreen size="lg" text="Signing in..." />}
+
+      {loading && (
+        <Loader
+          fullScreen
+          size="lg"
+          text="Signing in..."
+        />
+      )}
+
       <div className="min-h-[80vh] flex items-center justify-center bg-gray-100 px-4">
+
         <div className="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
-          <h2 className="text-3xl font-bold text-center text-blue-700 mb-8">Login</h2>
-          <form onSubmit={handleSubmit} className="space-y-5">
+
+          <h2 className="text-3xl font-bold text-center text-blue-700 mb-8">
+            Login
+          </h2>
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-5"
+          >
+
             <div>
-              <label className="block mb-2 font-semibold text-gray-700">Username</label>
+              <label className="block mb-2 font-semibold">
+                Username
+              </label>
+
               <input
                 type="text"
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Enter username"
+                placeholder="Enter any username"
                 className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
+
             <div>
-              <label className="block mb-2 font-semibold text-gray-700">Password</label>
+              <label className="block mb-2 font-semibold">
+                Password
+              </label>
+
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Enter password"
+                placeholder="Enter any password"
                 className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
+
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg font-semibold transition disabled:bg-gray-400"
             >
-              Login
+              {loading ? "Signing In..." : "Login"}
             </button>
+
           </form>
+
         </div>
+
       </div>
     </>
   );
