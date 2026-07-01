@@ -7,6 +7,8 @@ import WebcamCapture from "../components/WebcamCapture";
 import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
 const Register = () => {
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +43,7 @@ const Register = () => {
 
   // Camera or Upload
   const [imageMethod, setImageMethod] = useState("camera");
+
 
   const handleChange = (e) => {
     setFormData({
@@ -91,37 +94,22 @@ const Register = () => {
       const token = localStorage.getItem("token");
 
       await axios.post(
-        "http://localhost:10000/api/pensioners/register",
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+  `${API_URL}/pensioners/register`,
+  data,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  }
+);
 
       alert("Pensioner registered successfully.");
 
       setFormData({
         pensionerId: "",
         nameAmh: "",
-        nameEng: "",
-        tin: "",
-        phone: "",
-        age: "",
-        gender: "",
-        faydaNumber: "",
-        poessaBranch: "",
-        bankNameAmh: "",
-        bankNameEng: "",
-        bankBranch: "",
-        pensionAmount: "",
-        addressAmh: "",
-        addressEng: "",
-        issueDate: "",
-        expiryDate: "",
-      });
+        nameEng: "", tin: "", phone: "",age: "",gender: "",faydaNumber: "",poessaBranch: "",bankNameAmh: "", bankNameEng: "", bankBranch: "",pensionAmount: "",addressAmh: "",addressEng: "",issueDate: "",expiryDate: "",});
 
       setImageFile(null);
       setCapturedImage(null);

@@ -5,6 +5,7 @@ import axios from "axios";
 
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
+const API_URL = process.env.REACT_APP_API_URL;
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);
@@ -26,13 +27,13 @@ const Dashboard = () => {
       setLoading(true);
 
       const res = await axios.get(
-        "http://localhost:10000/api/pensioners",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  `${API_URL}/pensioners`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
       setPensioners(res.data);
 
@@ -305,13 +306,13 @@ const Dashboard = () => {
                             try {
 
                               await axios.delete(
-                                `http://localhost:10000/api/pensioners/${pensioner._id}`,
-                                {
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                  },
-                                }
-                              );
+  `${API_URL}/pensioners/${pensioner._id}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
                               loadPensioners();
 

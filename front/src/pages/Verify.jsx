@@ -8,6 +8,7 @@ import Navbar from "../components/Navbar";
 import WebcamCapture from "../components/WebcamCapture";
 import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
+const API_URL = process.env.REACT_APP_API_URL;
 
 const Verify = () => {
   const [loading, setLoading] = useState(false);
@@ -39,14 +40,14 @@ const Verify = () => {
 
       const token = localStorage.getItem("token");
 
-      const res = await axios.get(
-        `http://localhost:10000/api/pensioners/search?search=${search}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+     const res = await axios.get(
+  `${API_URL}/pensioners/search?search=${search}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
       setPensioner(res.data);
 
@@ -202,11 +203,11 @@ const Verify = () => {
                     Registered Photo
                   </h4>
 
-                  <img
-                    src={`http://localhost:10000/${pensioner.image}`}
-                    alt="Registered"
-                    className="w-72 h-72 rounded-lg border object-cover shadow"
-                  />
+                 <img
+  src={`${API_URL}/${pensioner.image}`}
+  alt="Registered"
+  className="w-72 h-72 rounded-lg border object-cover shadow"
+/>
 
                 </div>
 
@@ -308,17 +309,18 @@ const Verify = () => {
                         );
                       }
 
-                      const res = await axios.post(
-                        "http://localhost:10000/api/verify",
-                        formData,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type":
-                              "multipart/form-data",
-                          },
-                        }
-                      );
+                     
+
+const res = await axios.post(
+  `${API_URL}/verify`,
+  formData,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  }
+);
 
                       setVerificationResult(res.data);
 
