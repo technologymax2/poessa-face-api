@@ -1,5 +1,3 @@
-// src/services/api.js
-
 import axios from "axios";
 
 const API = axios.create({
@@ -31,7 +29,7 @@ export const login = (data) =>
   API.post("/auth/login", data);
 
 // ==============================
-// Pensioner
+// Pensioners
 // ==============================
 
 export const registerPensioner = (formData) =>
@@ -47,6 +45,8 @@ export const getPensioners = () =>
 export const getPensioner = (id) =>
   API.get(`/pensioners/${id}`);
 
+// ✅ Your backend route is:
+// GET /api/pensioners/search/:keyword
 export const searchPensioner = (keyword) =>
   API.get(`/pensioners/search/${encodeURIComponent(keyword)}`);
 
@@ -64,8 +64,10 @@ export const deletePensioner = (id) =>
 // Face Verification
 // ==============================
 
+// ✅ Your backend route is:
+// POST /api/verification
 export const verifyPensioner = (formData) =>
-  API.post("/verification/verify", formData, {
+  API.post("/verification", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
