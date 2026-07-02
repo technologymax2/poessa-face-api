@@ -46,7 +46,6 @@ export const getPensioner = (id) =>
   API.get(`/pensioners/${id}`);
 
 // ✅ Your backend route is:
-// GET /api/pensioners/search/:keyword
 export const searchPensioner = (keyword) =>
   API.get(`/pensioners/search/${encodeURIComponent(keyword)}`);
 
@@ -72,7 +71,6 @@ export const verifyPensioner = (formData) =>
       "Content-Type": "multipart/form-data",
     },
   });
-
 // ==============================
 // Dashboard
 // ==============================

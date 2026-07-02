@@ -84,45 +84,65 @@ const Verify = () => {
     setCapturedImage(null);
   };
 
-  const handleVerifyIdentity = async () => {
-    if (!capturedImage && !imageFile) {
-      alert("Please capture or upload a verification photo.");
-      return;
+ const handleVerifyIdentity = async () => {
+  if (!capturedImage && !imageFile) {
+    alert("Please capture or upload a verification photo.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setVerificationResult(null);
+
+    const formData = new FormData();
+
+    formData.append("pensionerId", pensioner.pensionerId);
+
+    if (imageFile) {
+      // upload selected file
+      formData.append("selfie", imageFile);
+    } else if (capturedImage) {
+      // convert base64 webcam image to file
+      const blob = await (await fetch(capturedImage)).blob();
+
+      const selfie = new File(
+        [blob],
+        "selfie.jpg",
+        {
+          type: "image/jpeg",
+        }
+      );
+
+      formData.append("selfie", selfie);
     }
 
-    try {
-      setLoading(true);
+    const res = await verifyPensioner(formData);
 
-      const formData = new FormData();
+    setVerificationResult({
+      verified: res.data.data.verified,
+      faceMatched: res.data.data.faceMatched,
+      livenessPassed: res.data.data.livenessPassed,
+      similarity: res.data.similarity,
+      message: res.data.message,
+    });
 
-      formData.append("pensionerId", pensioner.pensionerId);
+  } catch (err) {
+    console.error(err);
 
-      if (imageFile) {
-        formData.append("image", imageFile);
-      }
+    setVerificationResult({
+      verified: false,
+      faceMatched: false,
+      livenessPassed: false,
+      similarity: 0,
+      message:
+        err.response?.data?.message ||
+        "Verification failed.",
+    });
 
-      if (capturedImage) {
-        formData.append("capturedImage", capturedImage);
-      }
-
-      const res = await verifyPensioner(formData);
-
-      setVerificationResult(res.data);
-    } catch (err) {
-      console.error(err);
-
-      setVerificationResult({
-        verified: false,
-        faceMatched: false,
-        livenessPassed: false,
-        message:
-          err.response?.data?.message ||
-          "Verification failed.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
