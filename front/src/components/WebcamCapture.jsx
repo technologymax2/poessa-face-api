@@ -13,11 +13,7 @@ const WebcamCapture = ({ onCapture, preview }) => {
     width: 400,
     height: 400,
     facingMode,
-  };const videoConstraints = {
-  width: 400,
-  height: 400,
-  facingMode: "user",
-};
+  };
 
 // ከፓረንት ገጹ 'onCapture' እና 'preview' ቫልዩን እንቀበላለን
 const WebcamCapture = ({ onCapture, preview }) => {
