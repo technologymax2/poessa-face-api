@@ -16,7 +16,6 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [imageFile, setImageFile] = useState(null);
-  const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [imageMethod, setImageMethod] = useState("camera");
 
@@ -24,22 +23,26 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleCapture = (image) => { setCapturedImage(image); setPreview(image); setImageFile(null); };
-  const handleUpload = (file, imgPreview) => { setImageFile(file); setPreview(imgPreview); setCapturedImage(null); };
-
+ const handleCapture = (file, imagePreview) => {
+  setImageFile(file);
+  setPreview(imagePreview);
+};
+  const handleUpload = (file, imgPreview) => {
+  setImageFile(file);
+  setPreview(imgPreview);
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!capturedImage && !imageFile) {
-      alert("Please capture or upload a photo.");
-      return;
-    }
+    if (!imageFile) {
+  alert("Please capture or upload a registration photo.");
+  return;
+}
 
     try {
       setLoading(true);
       const data = new FormData();
       Object.keys(formData).forEach((key) => data.append(key, formData[key]));
-      if (imageFile) data.append("image", imageFile);
-      if (capturedImage) data.append("capturedImage", capturedImage);
+      data.append("image", imageFile);
 
       // አዲሱን የሰርቪስ ጥሪ መጠቀም
       await registerPensioner(data);
