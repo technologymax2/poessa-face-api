@@ -47,10 +47,12 @@ const verifyPensioner = async (req, res) => {
         pensioner.lastVerificationImage = selfieImage;
 
         // Compare faces
-        const faceResult = await compareFaces(
-            registeredImage,
-            selfieImage
-        );
+       const faceResult = await Promise.race([
+    compareFaces(registeredImage, selfieImage),
+    new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Face comparison timeout")), 30000)
+    ),
+]);
 
         if (!faceResult.match) {
 
@@ -71,7 +73,12 @@ const verifyPensioner = async (req, res) => {
         pensioner.faceMatched = true;
 
         // Check liveness
-        const liveResult = await checkLiveness(selfieImage);
+        const liveResult = await Promise.race([
+    checkLiveness(selfieImage),
+    new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Liveness timeout")), 30000)
+    ),
+]);
 
         if (!liveResult.live) {
 
