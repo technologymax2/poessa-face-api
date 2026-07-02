@@ -1,12 +1,20 @@
-const compareFaces = async (registeredImage, selfieImage) => {
-  console.log("Comparing:");
-  console.log(registeredImage);
-  console.log(selfieImage);
+const { execFile } = require("child_process");
+const path = require("path");
 
-  return {
-    match: true,
-    similarity: 0.98,
-  };
+const compareFaces = (registeredImage, selfieImage) => {
+  return new Promise((resolve, reject) => {
+    const script = path.join(__dirname, "../python/compare.py");
+
+    execFile(
+      "python",
+      [script, registeredImage, selfieImage],
+      (err, stdout) => {
+        if (err) return reject(err);
+
+        resolve(JSON.parse(stdout));
+      }
+    );
+  });
 };
 
 module.exports = compareFaces;
