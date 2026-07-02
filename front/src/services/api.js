@@ -47,8 +47,8 @@ export const getPensioners = () =>
 export const getPensioner = (id) =>
   API.get(`/pensioners/${id}`);
 
-export const searchPensioner = (search) =>
-  API.get(`/pensioners/search?search=${search}`);
+export const searchPensioner = (keyword) =>
+  API.get(`/pensioners/search/${encodeURIComponent(keyword)}`);
 
 export const updatePensioner = (id, formData) =>
   API.put(`/pensioners/${id}`, formData, {

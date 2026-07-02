@@ -28,8 +28,15 @@ const Verify = () => {
       setVerificationResult(null); setCapturedImage(null); setImageFile(null); setPreview(null);
 
       // አዲሱን የሰርቪስ ጥሪ መጠቀም
-      const res = await searchPensioner(query);
-      setPensioner(res.data);
+  const res = await searchPensioner(query);
+
+if (!res.data.success || res.data.data.length === 0) {
+  setPensioner(null);
+  alert("Pensioner not found.");
+  return;
+}
+
+setPensioner(res.data.data[0]);
     } catch (err) {
       console.error(err);
       setPensioner(null);
