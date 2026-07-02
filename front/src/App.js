@@ -7,6 +7,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Verify from "./pages/Verify";
 import Dashboard from "./pages/Dashboard";
+import ViewPensioner from "./pages/ViewPensioner";
+import EditPensioner from "./pages/EditPensioner";
 
 // Components
 import PrivateRoute from "./components/PrivateRoute";
@@ -25,6 +27,15 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+  path="/pensioners/view/:id"
+  element={<ViewPensioner />}
+/>
+
+<Route
+  path="/pensioners/edit/:id"
+  element={<EditPensioner />}
+/>
         </Route>
 
         {/* 404 Page */}

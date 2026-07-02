@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
 
@@ -12,6 +13,7 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   const loadPensioners = useCallback(async () => {
     try {
@@ -166,17 +168,17 @@ const Dashboard = () => {
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-wrap justify-center gap-2">
                         <button
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                          onClick={() => alert(`View details for ${pensioner.nameEng}`)}
-                        >
-                          View
-                        </button>
+  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+  onClick={() => navigate(`/pensioners/view/${pensioner._id}`)}
+>
+  View
+</button>
                         <button
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
-                          onClick={() => alert(`Edit ${pensioner.nameEng}`)}
-                        >
-                          Edit
-                        </button>
+  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+  onClick={() => navigate(`/pensioners/edit/${pensioner._id}`)}
+>
+  Edit
+</button>
                         <button
                           className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
                           onClick={() => handleDelete(pensioner._id, pensioner.nameEng)}

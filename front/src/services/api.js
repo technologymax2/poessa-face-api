@@ -50,8 +50,12 @@ export const getPensioner = (id) =>
 export const searchPensioner = (search) =>
   API.get(`/pensioners/search?search=${search}`);
 
-export const updatePensioner = (id, data) =>
-  API.put(`/pensioners/${id}`, data);
+export const updatePensioner = (id, formData) =>
+  API.put(`/pensioners/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
 export const deletePensioner = (id) =>
   API.delete(`/pensioners/${id}`);
