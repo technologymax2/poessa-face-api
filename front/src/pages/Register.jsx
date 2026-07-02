@@ -31,8 +31,75 @@ const Register = () => {
   setImageFile(file);
   setPreview(imgPreview);
 };
+  
+  const onlyLetters = (value) => /^[A-Za-z\s]+$/.test(value);
+
+const onlyAmharic = (value) =>
+  /^[\u1200-\u137F\s]+$/.test(value);
+
+const onlyNumbers = (value) => /^\d+$/.test(value);
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Pensioner ID (10 digits)
+if (!/^\d{10}$/.test(formData.pensionerId)) {
+  alert("Pensioner ID must contain exactly 10 digits.");
+  return;
+}
+
+// TIN (10 digits)
+if (!/^\d{10}$/.test(formData.tin)) {
+  alert("TIN must contain exactly 10 digits.");
+  return;
+}
+
+// Fayda (16 digits)
+if (!/^\d{16}$/.test(formData.faydaNumber)) {
+  alert("Fayda Number must contain exactly 16 digits.");
+  return;
+}
+
+// Phone
+if (!/^\d{10,15}$/.test(formData.phone)) {
+  alert("Enter a valid phone number.");
+  return;
+}
+
+// English Name
+if (!onlyLetters(formData.nameEng)) {
+  alert("English Name must contain letters only.");
+  return;
+}
+
+// Amharic Name
+if (!onlyAmharic(formData.nameAmh)) {
+  alert("Amharic Name must contain Amharic letters only.");
+  return;
+}
+
+// Age
+if (Number(formData.age) < 18 || Number(formData.age) > 120) {
+  alert("Age must be between 18 and 120.");
+  return;
+}
+
+// Pension Amount
+if (Number(formData.pensionAmount) <= 0) {
+  alert("Invalid pension amount.");
+  return;
+}
+
+// Dates
+if (new Date(formData.issueDate) >= new Date(formData.expiryDate)) {
+  alert("Expiry Date must be later than Issue Date.");
+  return;
+}
+
+// Registration Photo
+if (!imageFile) {
+  alert("Please capture or upload a registration photo.");
+  return;
+}
     if (!imageFile) {
   alert("Please capture or upload a registration photo.");
   return;
@@ -69,23 +136,86 @@ const Register = () => {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block mb-2 font-semibold">Pensioner ID</label>
-              <input type="text" name="pensionerId" value={formData.pensionerId} onChange={handleChange} required className="w-full border rounded-lg p-3" />
+     <input
+  type="text"
+  name="tin"
+  value={formData.tin}
+  maxLength={10}
+  onChange={(e)=>
+    setFormData({
+      ...formData,
+      tin:e.target.value.replace(/\D/g,"")
+    })
+  }
+  required
+  className="w-full border rounded-lg p-3"
+/>
             </div>
             <div>
               <label className="block mb-2 font-semibold">Fayda Number</label>
-              <input type="text" name="faydaNumber" value={formData.faydaNumber} onChange={handleChange} required className="w-full border rounded-lg p-3" />
+        <input
+  type="text"
+  name="faydaNumber"
+  value={formData.faydaNumber}
+  maxLength={16}
+  onChange={(e)=>
+    setFormData({
+      ...formData,
+      faydaNumber:e.target.value.replace(/\D/g,"")
+    })
+  }
+  required
+  className="w-full border rounded-lg p-3"
+/>
             </div>
             <div>
               <label className="block mb-2 font-semibold">Name (English)</label>
-              <input type="text" name="nameEng" value={formData.nameEng} onChange={handleChange} required className="w-full border rounded-lg p-3" />
+              <input
+  type="text"
+  name="nameEng"
+  value={formData.nameEng}
+  onChange={(e)=>
+    setFormData({
+      ...formData,
+      nameEng:e.target.value.replace(/[^A-Za-z\s]/g,"")
+    })
+  }
+  required
+  className="w-full border rounded-lg p-3"
+/>
             </div>
             <div>
               <label className="block mb-2 font-semibold">Name (Amharic)</label>
-              <input type="text" name="nameAmh" value={formData.nameAmh} onChange={handleChange} required className="w-full border rounded-lg p-3" />
+              <input
+  type="text"
+  name="nameAmh"
+  value={formData.nameAmh}
+  onChange={(e)=>
+    setFormData({
+      ...formData,
+      nameAmh:e.target.value.replace(/[^\u1200-\u137F\s]/g,"")
+    })
+  }
+  required
+  className="w-full border rounded-lg p-3"
+/>
             </div>
             <div>
               <label className="block mb-2 font-semibold">Phone Number</label>
-              <input type="text" name="phone" value={formData.phone} onChange={handleChange} required className="w-full border rounded-lg p-3" />
+          <input
+  type="text"
+  name="phone"
+  value={formData.phone}
+  maxLength={15}
+  onChange={(e)=>
+    setFormData({
+      ...formData,
+      phone:e.target.value.replace(/\D/g,"")
+    })
+  }
+  required
+  className="w-full border rounded-lg p-3"
+/>
             </div>
             <div>
               <label className="block mb-2 font-semibold">Age</label>
