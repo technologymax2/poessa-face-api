@@ -1,7 +1,19 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 
-const videoConstraints = {
+const WebcamCapture = ({ onCapture, preview }) => {
+
+  const webcamRef = useRef(null);
+
+  const [cameraOn, setCameraOn] = useState(false);
+
+  const [facingMode, setFacingMode] = useState("user");
+
+  const videoConstraints = {
+    width: 400,
+    height: 400,
+    facingMode,
+  };const videoConstraints = {
   width: 400,
   height: 400,
   facingMode: "user",
@@ -19,17 +31,47 @@ const WebcamCapture = ({ onCapture, preview }) => {
     }
   }, [preview]);
 
-  const capture = useCallback(() => {
-    const imageSrc = webcamRef.current?.getScreenshot();
+const capture = useCallback(() => {
+  const imageSrc = webcamRef.current?.getScreenshot();
 
-    if (imageSrc) {
-      setCameraOn(false);
-      if (onCapture) {
-        onCapture(imageSrc); // ምስሉን ወደ ላይ (Parent) እንልካለን
-      }
+  if (!imageSrc) return;
+
+  // Convert Base64 to Blob
+  const byteString = atob(imageSrc.split(",")[1]);
+  const mimeString = imageSrc.split(",")[0].split(":")[1].split(";")[0];
+
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+
+  const blob = new Blob([ab], { type: mimeString });
+
+  // Create a real File
+  const file = new File(
+    [blob],
+    `capture_${Date.now()}.jpg`,
+    {
+      type: "image/jpeg",
     }
-  }, [onCapture]);
+  );
 
+  setCameraOn(false);
+
+  if (onCapture) {
+    onCapture(file, imageSrc);
+  }
+}, [onCapture]);
+
+ const retake = () => {
+  setCameraOn(true);
+
+  if (onCapture) {
+    onCapture(null, null);
+  }
+};
   const retake = () => {
     setCameraOn(true);
     if (onCapture) {
@@ -38,12 +80,12 @@ const WebcamCapture = ({ onCapture, preview }) => {
   };
 
   const handleCancel = () => {
-    setCameraOn(false);
-    if (onCapture) {
-      onCapture(null);
-    }
-  };
+  setCameraOn(false);
 
+  if (onCapture) {
+    onCapture(null, null);
+  }
+};
   return (
     <div className="w-full max-w-md mx-auto">
       {/* ካሜራው ካልተከፈተ እና እስካሁን ፎቶ ካልተነሳ */}
@@ -69,6 +111,17 @@ const WebcamCapture = ({ onCapture, preview }) => {
           />
 
           <div className="flex gap-3">
+           <button
+  type="button"
+  onClick={() =>
+    setFacingMode((prev) =>
+      prev === "user" ? "environment" : "user"
+    )
+  }
+  className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg"
+>
+  🔄 Camera
+</button>
             <button
               type="button"
               onClick={capture}
