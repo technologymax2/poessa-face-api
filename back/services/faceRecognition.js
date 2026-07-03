@@ -12,34 +12,43 @@ const compareFaces = (registeredImage, selfieImage) => {
       path.join(__dirname, "..", selfieImage),
     ]);
 
-    let data = "";
+    let output = "";
+    let errorOutput = "";
 
-    python.stdout.on("data", chunk => {
-      data += chunk.toString();
+    python.stdout.on("data", (data) => {
+      output += data.toString();
     });
 
-    python.stderr.on("data", err => {
-      console.error(err.toString());
+    python.stderr.on("data", (data) => {
+      errorOutput += data.toString();
     });
 
     python.on("close", (code) => {
-  try {
-    console.log("DeepFace Output:\n", data);
 
-    const lines = data
-      .trim()
-      .split("\n")
-      .filter(line => line.trim());
+      console.log("===== DeepFace STDOUT =====");
+      console.log(output);
 
-    const jsonLine = lines[lines.length - 1];
+      console.log("===== DeepFace STDERR =====");
+      console.log(errorOutput);
 
-    resolve(JSON.parse(jsonLine));
-  } catch (err) {
-    console.error("Face JSON Parse Error:", err);
-    console.error("Raw Output:", data);
-    reject(err);
-  }
-});
+      try {
+        const lines = output
+          .trim()
+          .split("\n")
+          .filter(line => line.trim());
+
+        const json = JSON.parse(lines[lines.length - 1]);
+
+        resolve(json);
+
+      } catch (err) {
+
+        reject(new Error("Cannot parse DeepFace output:\n" + output));
+
+      }
+
+    });
+
   });
 };
 
