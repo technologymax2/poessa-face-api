@@ -23,12 +23,23 @@ const checkLiveness = (imagePath) => {
     });
 
     python.on("close", () => {
-      try {
-        resolve(JSON.parse(output));
-      } catch (err) {
-        reject(err);
-      }
-    });
+  try {
+    console.log("Liveness Output:\n", output);
+
+    const lines = output
+      .trim()
+      .split("\n")
+      .filter(line => line.trim());
+
+    const jsonLine = lines[lines.length - 1];
+
+    resolve(JSON.parse(jsonLine));
+  } catch (err) {
+    console.error("Liveness JSON Parse Error:", err);
+    console.error("Raw Output:", output);
+    reject(err);
+  }
+});
 
   });
 };
