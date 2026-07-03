@@ -1,0 +1,9 @@
+deepface==0.0.100
+tensorflow==2.21.0
+tf-keras==2.21.0
+opencv-python==5.0.0.93
+numpy
+pillow
+retina-face
+mtcnn
+pandas
