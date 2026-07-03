@@ -1,4 +1,3 @@
-
 const { spawn } = require("child_process");
 const path = require("path");
 
@@ -13,33 +12,42 @@ const checkLiveness = (imagePath) => {
     ]);
 
     let output = "";
+    let errorOutput = "";
 
     python.stdout.on("data", (data) => {
       output += data.toString();
     });
 
     python.stderr.on("data", (data) => {
-      console.error(data.toString());
+      errorOutput += data.toString();
     });
 
     python.on("close", () => {
-  try {
-    console.log("Liveness Output:\n", output);
 
-    const lines = output
-      .trim()
-      .split("\n")
-      .filter(line => line.trim());
+      console.log("===== Liveness STDOUT =====");
+      console.log(output);
 
-    const jsonLine = lines[lines.length - 1];
+      console.log("===== Liveness STDERR =====");
+      console.log(errorOutput);
 
-    resolve(JSON.parse(jsonLine));
-  } catch (err) {
-    console.error("Liveness JSON Parse Error:", err);
-    console.error("Raw Output:", output);
-    reject(err);
-  }
-});
+      try {
+
+        const lines = output
+          .trim()
+          .split("\n")
+          .filter(line => line.trim());
+
+        const json = JSON.parse(lines[lines.length - 1]);
+
+        resolve(json);
+
+      } catch (err) {
+
+        reject(new Error("Cannot parse Liveness output:\n" + output));
+
+      }
+
+    });
 
   });
 };
