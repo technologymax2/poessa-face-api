@@ -22,14 +22,24 @@ const compareFaces = (registeredImage, selfieImage) => {
       console.error(err.toString());
     });
 
-    python.on("close", () => {
-      try {
-        resolve(JSON.parse(data));
-      } catch (err) {
-        reject(err);
-      }
-    });
+    python.on("close", (code) => {
+  try {
+    console.log("DeepFace Output:\n", data);
 
+    const lines = data
+      .trim()
+      .split("\n")
+      .filter(line => line.trim());
+
+    const jsonLine = lines[lines.length - 1];
+
+    resolve(JSON.parse(jsonLine));
+  } catch (err) {
+    console.error("Face JSON Parse Error:", err);
+    console.error("Raw Output:", data);
+    reject(err);
+  }
+});
   });
 };
 
