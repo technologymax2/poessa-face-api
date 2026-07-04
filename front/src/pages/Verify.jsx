@@ -95,7 +95,7 @@ const Verify = () => {
         const blob = await (await fetch(capturedImage)).blob();
         formData.append("selfie", new File([blob], "selfie.jpg", { type: "image/jpeg" }));
       }
-
+      console.log(faceDescriptor?.length);
       const res = await verifyPensioner(formData);
       setVerificationResult({
         verified: res.data.data.verified,
