@@ -34,7 +34,9 @@ const registerPensioner = async (req, res) => {
             addressAmh,
             addressEng,
             issueDate,
-            expiryDate
+            expiryDate,
+faceDescriptor
+            
         } = req.body;
 
         const existingPensioner = await Pensioner.findOne({
@@ -78,7 +80,11 @@ const registerPensioner = async (req, res) => {
             verified: false,
             faceMatched: false,
             livenessPassed: false,
-            verificationAttempts: 0
+            verificationAttempts: 0,
+
+            faceDescriptor: faceDescriptor
+    ? JSON.parse(faceDescriptor)
+    : [],
 
         });
 
