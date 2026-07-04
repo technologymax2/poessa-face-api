@@ -138,6 +138,13 @@ const pensionerSchema = new mongoose.Schema(
       default: 0,
     },
 
+
+faceDescriptor: {
+  type: [Number],
+  default: [],
+},
+
+    
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE"],
