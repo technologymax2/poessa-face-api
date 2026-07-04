@@ -1,10 +1,9 @@
 const Pensioner = require("../models/Pensioner");
-const compareFaces = require("../services/faceRecognition");
 const checkLiveness = require("../services/livenessDetection");
 
 /**
  * POST /api/verification
- * Upload selfie and verify pensioner
+ * Frontend በ face-api.js ያረጋገጠውን ውጤት በመቀበል ማረጋገጫ መስጠት
  */
 const verifyPensioner = async (req, res) => {
     try {
@@ -15,7 +14,8 @@ const verifyPensioner = async (req, res) => {
             });
         }
 
-        const { pensionerId, faydaNumber, faceDescriptor } = req.body;
+        // Frontend የላከው verified (boolean) እና similarity (number)
+        const { pensionerId, faydaNumber, verified, similarity } = req.body;
 
         if (!pensionerId && !faydaNumber) {
             return res.status(400).json({
@@ -35,40 +35,28 @@ const verifyPensioner = async (req, res) => {
             });
         }
 
-        pensioner.verificationAttempts += 1;
-        const selfieImage = `/uploads/verification/${req.file.filename}`;
-        pensioner.lastVerificationImage = selfieImage;
-
-        // የፊት ማነፃፀሪያ (Face Comparison)
-        // Frontend የላከውን faceDescriptor መጠቀም (ካለ)
-        const descriptor = faceDescriptor ? JSON.parse(faceDescriptor) : null;
-        
-        const faceResult = await Promise.race([
-            compareFaces(pensioner.image, selfieImage, descriptor), // descriptor ተጨመረ
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Face comparison timeout")), 30000))
-        ]);
-
-        if (!faceResult.match) {
+        // የፊት ንፅፅር ውጤት ከ Frontend የመጣ
+        if (!verified || verified === 'false') {
+            pensioner.verificationAttempts += 1;
             pensioner.faceMatched = false;
-            pensioner.livenessPassed = false;
             pensioner.verified = false;
             await pensioner.save();
             return res.status(400).json({
                 success: false,
-                message: "Face does not match.",
-                similarity: faceResult.similarity
+                message: "Face verification failed on client side.",
+                similarity: similarity || 0
             });
         }
 
-        pensioner.faceMatched = true;
-
-        // Check liveness
+        // Liveness Detection (ይህንን Backend ላይ ማስቀጠል ትችላለህ)
+        const selfieImage = `/uploads/verification/${req.file.filename}`;
         const liveResult = await Promise.race([
             checkLiveness(selfieImage),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Liveness timeout")), 30000))
         ]);
 
         if (!liveResult.live) {
+            pensioner.verificationAttempts += 1;
             pensioner.livenessPassed = false;
             pensioner.verified = false;
             await pensioner.save();
@@ -78,15 +66,20 @@ const verifyPensioner = async (req, res) => {
             });
         }
 
+        // ሁሉም ነገር ከተሳካ
+        pensioner.verificationAttempts += 1;
+        pensioner.faceMatched = true;
         pensioner.livenessPassed = true;
         pensioner.verified = true;
         pensioner.verifiedAt = new Date();
+        pensioner.lastVerificationImage = selfieImage;
+
         await pensioner.save();
 
         return res.status(200).json({
             success: true,
             message: "Pensioner verified successfully.",
-            similarity: faceResult.similarity,
+            similarity: similarity,
             data: pensioner
         });
 
@@ -104,11 +97,7 @@ const verifyPensioner = async (req, res) => {
  */
 const verificationHistory = async (req, res) => {
     try {
-        const history = await Pensioner.find({
-            verified: true
-        }).sort({
-            verifiedAt: -1
-        });
+        const history = await Pensioner.find({ verified: true }).sort({ verifiedAt: -1 });
         res.status(200).json({
             success: true,
             count: history.length,
