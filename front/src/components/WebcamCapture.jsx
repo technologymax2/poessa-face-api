@@ -8,27 +8,27 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [status, setStatus] = useState("Idle");
 
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        setStatus("Loading models...");
-        const MODEL_URL = '/models'; 
-        
-        // ሞዴሎችን በቅደም ተከተል መጫን
-        await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
+  // በ useEffect ውስጥ ያለውን loadModels አስተካክል
+const loadModels = async () => {
+  try {
+    setStatus("Loading models...");
+    
+    // ከ .env ፋይል ላይ ይወስደዋል
+    const MODEL_URL = process.env.REACT_APP_MODEL_URL; 
+    
+    await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    // expression እና ageGender ለጊዜው እንተው - አፕሊኬሽኑ እንዲረጋጋ
+    
+    setIsModelLoaded(true);
+    setStatus("Ready");
+  } catch (error) {
+    console.error("❌ Model load error:", error);
+    setStatus("Error loading models");
+  }
+};
 
-        setIsModelLoaded(true);
-        setStatus("Ready");
-        console.log("✅ Models loaded!");
-      } catch (error) {
-        console.error("❌ Model load error:", error);
-        setStatus("Error loading models");
-      }
-    };
 
     loadModels();
   }, []);
