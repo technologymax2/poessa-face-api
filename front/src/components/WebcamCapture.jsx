@@ -28,8 +28,10 @@ const WebcamCapture = ({ onCapture, preview }) => {
         setIsModelLoaded(true);
         setStatus("Ready");
       } catch (error) {
-        setStatus("Error loading models");
-      }
+  console.error("Model loading error:", error);
+  alert(error.message);
+  setStatus("Error loading models");
+}
     };
     loadModels();
   }, []);
