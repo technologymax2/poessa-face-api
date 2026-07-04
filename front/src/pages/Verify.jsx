@@ -59,11 +59,14 @@ const Verify = () => {
 
   // የፊት መለኪያውን (descriptor) ለመቀበል የተሻሻለ
   const handleCapture = (file, image, descriptor) => {
-    setCapturedImage(image);
-    setPreview(image);
-    setFaceDescriptor(descriptor);
-    setImageFile(null);
-  };
+  console.log("Descriptor:", descriptor);
+  console.log("Length:", descriptor?.length);
+
+  setCapturedImage(image);
+  setPreview(image);
+  setFaceDescriptor(descriptor);
+  setImageFile(null);
+};
 
   const handleUpload = (file, imagePreview) => {
     setImageFile(file);
@@ -73,51 +76,69 @@ const Verify = () => {
   };
 
   const handleVerifyIdentity = async () => {
-    if (!capturedImage && !imageFile) {
-      alert("Please capture or upload a verification photo.");
-      return;
+  if (!capturedImage && !imageFile) {
+    alert("Please capture or upload a verification photo.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setVerificationResult(null);
+
+    const formData = new FormData();
+    formData.append("pensionerId", pensioner.pensionerId);
+
+    if (faceDescriptor) {
+      formData.append(
+        "faceDescriptor",
+        JSON.stringify(Array.from(faceDescriptor))
+      );
     }
 
-    try {
-      setLoading(true);
-      setVerificationResult(null);
-      const formData = new FormData();
-      formData.append("pensionerId", pensioner.pensionerId);
-
-      // Descriptor ካለ እንላካለን
-      if (faceDescriptor) {
-        formData.append("faceDescriptor", JSON.stringify(Array.from(faceDescriptor)));
-      }
-
-      if (imageFile) {
-        formData.append("selfie", imageFile);
-      } else if (capturedImage) {
-        const blob = await (await fetch(capturedImage)).blob();
-        formData.append("selfie", new File([blob], "selfie.jpg", { type: "image/jpeg" }));
-      }
-      console.log(faceDescriptor?.length);
-      const res = await verifyPensioner(formData);
-      setVerificationResult({
-        verified: res.data.data.verified,
-        faceMatched: res.data.data.faceMatched,
-        livenessPassed: res.data.data.livenessPassed,
-        similarity: res.data.similarity,
-        message: res.data.message,
-      });
-    } catch (err) {
-      console.error(err);
-      setVerificationResult({
-        verified: false,
-        faceMatched: false,
-        livenessPassed: false,
-        similarity: 0,
-        message: err.response?.data?.message || "Verification failed.",
-      });
-    } finally {
-      setLoading(false);
+    if (imageFile) {
+      formData.append("selfie", imageFile);
+    } else if (capturedImage) {
+      const blob = await (await fetch(capturedImage)).blob();
+      formData.append(
+        "selfie",
+        new File([blob], "selfie.jpg", { type: "image/jpeg" })
+      );
     }
-  };
 
+    // ===== DEBUG =====
+    console.log("faceDescriptor:", faceDescriptor);
+    console.log("Descriptor Length:", faceDescriptor?.length);
+
+    for (const pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+    // =================
+
+    const res = await verifyPensioner(formData);
+
+    console.log("Verify Response:", res.data);
+
+    setVerificationResult({
+      verified: res.data.data.verified,
+      faceMatched: res.data.data.faceMatched,
+      livenessPassed: res.data.data.livenessPassed,
+      similarity: res.data.similarity,
+      message: res.data.message,
+    });
+  } catch (err) {
+    console.error(err);
+
+    setVerificationResult({
+      verified: false,
+      faceMatched: false,
+      livenessPassed: false,
+      similarity: 0,
+      message: err.response?.data?.message || "Verification failed.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <>
       <Navbar />
