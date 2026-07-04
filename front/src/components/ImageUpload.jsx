@@ -1,79 +1,101 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
+import Webcam from "react-webcam";
 
-// ከፓረንት ገጹ ላይ 'preview' ቫልዩን በ props እንቀበላለን
-const ImageUpload = ({ onImageSelect, preview }) => {
+const FaceProcessor = ({ onResult }) => {
+  const webcamRef = useRef(null);
   const fileInputRef = useRef(null);
+  
+  const [cameraOn, setCameraOn] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [status, setStatus] = useState("Loading...");
 
-  const handleChange = (e) => {
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    // ምስል ብቻ መሆኑን ማረጋገጫ
-    if (!file.type.startsWith("image/")) {
-      alert("Please select a valid image.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (onImageSelect) {
-        // ፋይሉን እና የፕሪቪው ዳታውን ለፓረንት ገጽ እናስተላልፋለን
-        onImageSelect(file, reader.result);
+  // ሞዴሎችን መጫን
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const MODEL_URL = '/models';
+        await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        
+        setIsModelLoaded(true);
+        setStatus("Ready");
+      } catch (e) {
+        setStatus("Model load error");
+        alert("ሞዴሎቹ አልተገኙም");
       }
     };
-    reader.readAsDataURL(file);
+    loadModels();
+  }, []);
+
+  // የጋራ የፊት መለየት ሂደት
+  const processImage = async (imageSrc) => {
+    setStatus("Analyzing...");
+    const img = await window.faceapi.fetchImage(imageSrc);
+    const detection = await window.faceapi.detectSingleFace(img, new window.faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) {
+      alert("⚠️ ፊት አልተገኘም!");
+      setStatus("Ready");
+      return;
+    }
+    onResult(detection.descriptor);
+    setStatus("Ready");
   };
 
-  const removeImage = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    if (onImageSelect) {
-      // ሁሉንም ነገር ባዶ እናደርጋለን
-      onImageSelect(null, null);
+  // ካሜራ
+  const capture = useCallback(async () => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc) processImage(imageSrc);
+  }, []);
+
+  // ፋይል መምረጥ
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+        processImage(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* ምስል ካልተመረጠ ይህ ይታያል */}
-      {!preview && (
-        <label className="block">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleChange}
-            className="hidden"
-          />
-          <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center hover:border-blue-500 hover:bg-gray-50 transition">
-            <div className="text-5xl mb-2">📁</div>
-            <p className="font-semibold text-gray-700">Click to Upload Image</p>
-            <p className="text-sm text-gray-500 mt-1">JPG, JPEG or PNG</p>
-          </div>
+    <div className="w-full max-w-md mx-auto space-y-4">
+      <div className="text-center font-bold">Status: {status}</div>
+
+      {/* የፋይል መምረጫ */}
+      {!cameraOn && !preview && (
+        <label className="block border-2 border-dashed p-6 cursor-pointer text-center">
+          <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+          <p>Click to Upload Image or</p>
         </label>
       )}
 
-      {/* ምስል ሲመረጥ ይህ ይታያል */}
-      {preview && (
-        <div className="space-y-3">
-          <img
-            src={preview}
-            alt="Preview"
-            className="w-full h-72 object-cover rounded-lg border shadow-sm"
-          />
-          <button
-            type="button"
-            onClick={removeImage}
-            className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium"
-          >
-            Remove Image
-          </button>
+      {/* የካሜራ አማራጭ */}
+      {!preview && (
+        <button onClick={() => setCameraOn(!cameraOn)} className="w-full bg-blue-600 text-white p-2">
+          {cameraOn ? "Close Camera" : "Open Camera"}
+        </button>
+      )}
+
+      {cameraOn && (
+        <div className="space-y-2">
+          <Webcam ref={webcamRef} screenshotFormat="image/jpeg" className="w-full" />
+          <button onClick={capture} className="w-full bg-green-600 text-white p-2">Capture & Verify</button>
         </div>
+      )}
+
+      {preview && (
+        <button onClick={() => { setPreview(null); setStatus("Ready"); }} className="w-full bg-red-600 text-white p-2">Remove Image</button>
       )}
     </div>
   );
 };
 
-export default ImageUpload;
+export default FaceProcessor;
