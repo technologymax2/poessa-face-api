@@ -6,16 +6,24 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const [cameraOn, setCameraOn] = useState(false);
   const [facingMode, setFacingMode] = useState("user");
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [status, setStatus] = useState("Idle");
 
-  // 1. ሞዴሎችን መጫን
+  // ሞዴሎችን በመጫን ላይ
   useEffect(() => {
     const loadModels = async () => {
-      const MODEL_URL = '/models'; 
-      await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      setIsModelLoaded(true);
-      console.log("Face-api models loaded successfully!");
+      try {
+        setStatus("Loading models...");
+        const MODEL_URL = '/models'; 
+        await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        setIsModelLoaded(true);
+        setStatus("Ready");
+        console.log("Face-api models loaded successfully!");
+      } catch (error) {
+        console.error("Model load error:", error);
+        setStatus("Error loading models");
+      }
     };
     loadModels();
   }, []);
@@ -30,18 +38,24 @@ const WebcamCapture = ({ onCapture, preview }) => {
     if (!preview) setCameraOn(false);
   }, [preview]);
 
-  // 2. ፊትን መለየት እና መያዝ (Capture & Detect)
+  // ካሜራውን መያዝ እና ፊትን መለየት
   const capture = useCallback(async () => {
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (!imageSrc || !isModelLoaded) return;
+    if (!isModelLoaded) {
+      alert("ሞዴሎች ገና እየተጫኑ ነው፣ እባክዎ ይጠብቁ...");
+      return;
+    }
 
-    // ፊትን ለመለየት ምስሉን ማዘጋጀት
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (!imageSrc) return;
+
+    setStatus("Analyzing...");
     const img = await window.faceapi.fetchImage(imageSrc);
     const detection = await window.faceapi.detectSingleFace(img, new window.faceapi.TinyFaceDetectorOptions())
                                            .withFaceLandmarks()
                                            .withFaceDescriptor();
 
     if (!detection) {
+      setStatus("Ready");
       alert("⚠️ ፊት አልተገኘም! እባክዎ ፊትዎን በግልጽ ያሳዩ።");
       return;
     }
@@ -57,9 +71,10 @@ const WebcamCapture = ({ onCapture, preview }) => {
     const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
 
     setCameraOn(false);
+    setStatus("Ready");
 
     if (onCapture) {
-      // ፋይሉን እና የፊቱን መለኪያ (descriptor) ለወላጅ ኮምፖነንት እንልካለን
+      // ፋይሉን፣ ምስሉን እና የፊቱን መለኪያ (descriptor) ለወላጅ ኮምፖነንት እንልካለን
       onCapture(file, imageSrc, detection.descriptor);
     }
   }, [onCapture, isModelLoaded]);
@@ -86,9 +101,9 @@ const WebcamCapture = ({ onCapture, preview }) => {
         <div className="space-y-3">
           <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" videoConstraints={videoConstraints} className="rounded-lg border shadow-sm w-full object-cover" />
           <div className="flex gap-3">
-            <button type="button" onClick={() => setFacingMode((prev) => (prev === "user" ? "environment" : "user"))} className="bg-blue-600 text-white px-4 rounded-lg">🔄 Toggle</button>
+            <button type="button" onClick={() => setFacingMode((prev) => (prev === "user" ? "environment" : "user"))} className="bg-blue-600 text-white px-4 rounded-lg">🔄</button>
             <button type="button" onClick={capture} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium">
-              {isModelLoaded ? "Capture & Verify" : "Loading..."}
+              {status === "Ready" ? "Capture & Verify" : status}
             </button>
             <button type="button" onClick={handleCancel} className="flex-1 bg-gray-600 text-white py-2 rounded-lg font-medium">Cancel</button>
           </div>
