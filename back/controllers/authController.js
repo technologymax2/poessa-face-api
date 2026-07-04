@@ -1,4 +1,4 @@
-const FaceUser = require("../models/FaceUser");
+const User = require("../models/FaceUser");
 const jwt = require("jsonwebtoken");
 
 /**
