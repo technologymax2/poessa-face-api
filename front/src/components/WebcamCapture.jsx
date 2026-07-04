@@ -71,7 +71,9 @@ const WebcamCapture = ({ onCapture, preview }) => {
 
       setCameraOn(false);
       setStatus("Ready");
-      if (onCapture) onCapture(file, imageSrc, detection);
+      if (onCapture) {
+  onCapture(file, imageSrc, detection.descriptor);
+}
     } catch (err) {
       setStatus("Ready");
       alert("ስህተት ተፈጠረ። እባክዎ እንደገና ይሞክሩ።");
