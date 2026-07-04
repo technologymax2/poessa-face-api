@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
-import * as faceapi from "face-api.js"; // Recommended approach
+
+const faceapi = window.faceapi;
 
 const WebcamCapture = ({ onCapture, preview }) => {
   const webcamRef = useRef(null);
