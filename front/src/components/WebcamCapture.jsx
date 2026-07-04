@@ -9,24 +9,34 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const [status, setStatus] = useState("Idle");
 
   // ሞዴሎችን በመጫን ላይ
+    // ሞዴሎችን በመጫን ላይ
   useEffect(() => {
     const loadModels = async () => {
       try {
         setStatus("Loading models...");
+        // ዱካው በትክክል '/models' መሆኑን እና በ public አቃፊ ውስጥ መኖራቸውን እርግጠኛ ይሁኑ
         const MODEL_URL = '/models'; 
-        await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        
+        // ሞዴሎችን መጫን
+        await Promise.all([
+          window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+
         setIsModelLoaded(true);
         setStatus("Ready");
-        console.log("Face-api models loaded successfully!");
+        console.log("✅ Face-api models loaded successfully!");
       } catch (error) {
-        console.error("Model load error:", error);
+        console.error("❌ Model load error:", error);
         setStatus("Error loading models");
+        alert("ሞዴሎችን መጫን አልተቻለም። እባክዎ ኢንተርኔትዎን ይፈትሹ ወይም የሞዴል ፋይሎቹ በ public/models ውስጥ መኖራቸውን ያረጋግጡ።");
       }
     };
+
     loadModels();
   }, []);
+
 
   const videoConstraints = {
     width: 400,
