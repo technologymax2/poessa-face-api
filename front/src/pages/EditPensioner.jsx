@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
-import WebcamCapture from "../components/WebcamCapture"; // ይህን ጨምር
+import WebcamCapture from "../components/WebcamCapture";
+import ImageUpload from "../components/ImageUpload";
 import { getPensioner, updatePensioner } from "../services/api";
 
 const API_URL = process.env.REACT_APP_API_URL.replace("/api", "");
@@ -12,8 +13,10 @@ const EditPensioner = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState("");
-  const [image, setImage] = useState(null);
-  const [faceDescriptor, setFaceDescriptor] = useState(null); // ለፊት መለኪያ
+  const [imageFile, setImageFile] = useState(null);
+  const [faceDescriptor, setFaceDescriptor] = useState(null);
+  const [imageMethod, setImageMethod] = useState("camera"); // ለምርጫ
+
   const [formData, setFormData] = useState({
     pensionerId: "", nameAmh: "", nameEng: "", tin: "", phone: "",
     age: "", gender: "", faydaNumber: "", poessaBranch: "",
@@ -47,11 +50,24 @@ const EditPensioner = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // ፎቶ ሲቀየር የሚሰራ
+  // ካሜራ ሲጠቀም
   const handleCapture = (file, imagePreview, descriptor) => {
-    setImage(file);
+    setImageFile(file);
     setPreview(imagePreview);
     setFaceDescriptor(descriptor);
+  };
+
+  // Upload ሲጠቀም
+  const handleUpload = (file, imgPreview) => {
+    setImageFile(file);
+    setPreview(imgPreview);
+    setFaceDescriptor(null); // Upload ሲሆን face descriptor የለም
+  };
+
+  const handleMethodChange = (method) => {
+    setImageMethod(method);
+    setImageFile(null);
+    setFaceDescriptor(null);
   };
 
   const handleSubmit = async (e) => {
@@ -60,7 +76,7 @@ const EditPensioner = () => {
       setLoading(true);
       const data = new FormData();
       Object.keys(formData).forEach((key) => data.append(key, formData[key]));
-      if (image) data.append("image", image);
+      if (imageFile) data.append("image", imageFile);
       if (faceDescriptor) data.append("faceDescriptor", JSON.stringify(Array.from(faceDescriptor)));
 
       await updatePensioner(id, data);
@@ -76,9 +92,11 @@ const EditPensioner = () => {
     <>
       <Navbar />
       {loading && <Loader fullScreen size="lg" text="Updating..." />}
+      
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-3xl font-bold text-blue-700 mb-8">Edit Pensioner</h2>
+          
           <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
             <Input label="Pensioner ID" name="pensionerId" value={formData.pensionerId} onChange={handleChange} />
             <Input label="Fayda Number" name="faydaNumber" value={formData.faydaNumber} onChange={handleChange} />
@@ -107,10 +125,21 @@ const EditPensioner = () => {
             </div>
             <Input label="Issue Date" type="date" name="issueDate" value={formData.issueDate} onChange={handleChange} />
             <Input label="Expiry Date" type="date" name="expiryDate" value={formData.expiryDate} onChange={handleChange} />
-            
-            <div className="md:col-span-2">
-              <label className="font-semibold">Change Photo (Use Camera to update face recognition data)</label>
-              <WebcamCapture onCapture={handleCapture} preview={preview} />
+
+            {/* Photo Update Section */}
+            <div className="md:col-span-2 border-t pt-4">
+              <label className="block mb-3 font-semibold text-lg">Update Photo</label>
+              <div className="flex gap-4 mb-5">
+                <button type="button" onClick={() => handleMethodChange("camera")} className={`px-5 py-2 rounded-lg font-medium ${imageMethod === "camera" ? "bg-blue-600 text-white" : "bg-gray-200"}`}>📷 Camera</button>
+                <button type="button" onClick={() => handleMethodChange("upload")} className={`px-5 py-2 rounded-lg font-medium ${imageMethod === "upload" ? "bg-blue-600 text-white" : "bg-gray-200"}`}>📁 Upload</button>
+              </div>
+
+              {imageMethod === "camera" ? (
+                <WebcamCapture onCapture={handleCapture} preview={preview} />
+              ) : (
+                <ImageUpload onImageSelect={handleUpload} />
+              )}
+              {preview && !imageFile && <img src={preview} alt="Current" className="mt-4 w-60 rounded-lg border" />}
             </div>
 
             <div className="md:col-span-2 flex gap-4">
