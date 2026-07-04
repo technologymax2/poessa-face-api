@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
+import * as faceapi from "face-api.js"; // Recommended approach
 
 const WebcamCapture = ({ onCapture, preview }) => {
   const webcamRef = useRef(null);
@@ -8,42 +9,46 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [status, setStatus] = useState("Idle");
 
+  // 1. Efficient Model Loading
   useEffect(() => {
     const loadModels = async () => {
       try {
         setStatus("Loading models...");
-        const MODEL_URL = process.env.REACT_APP_MODEL_URL; 
+        const MODEL_URL = process.env.REACT_APP_MODEL_URL || "/models";
         
-        await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-        await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
+        ]);
+        
         setIsModelLoaded(true);
         setStatus("Ready");
-        console.log("✅ Models loaded!");
       } catch (error) {
-        console.error("❌ Model load error:", error);
         setStatus("Error loading models");
       }
     };
-
     loadModels();
-  }, []); // useEffect በትክክል ተዘግቷል
+  }, []);
 
+  // 2. Optimized Capture Logic
   const capture = useCallback(async () => {
-    if (!isModelLoaded) return;
+    if (!isModelLoaded || !webcamRef.current) return;
 
-    const imageSrc = webcamRef.current?.getScreenshot();
+    const imageSrc = webcamRef.current.getScreenshot();
     if (!imageSrc) return;
 
     try {
       setStatus("Analyzing...");
-      const img = await window.faceapi.fetchImage(imageSrc);
       
-      // ፊትን መለየት እና መረጃዎችን መውሰድ
-      const detection = await window.faceapi.detectSingleFace(
+      // Load image and convert for processing
+      const img = await faceapi.fetchImage(imageSrc);
+      
+      const detection = await faceapi.detectSingleFace(
         img, 
-        new window.faceapi.TinyFaceDetectorOptions()
+        new faceapi.TinyFaceDetectorOptions()
       )
       .withFaceLandmarks()
       .withFaceDescriptor()
@@ -52,52 +57,59 @@ const WebcamCapture = ({ onCapture, preview }) => {
 
       if (!detection) {
         setStatus("Ready");
-        alert("⚠️ ፊት አልተገኘም!");
+        alert("⚠️ ፊት አልተገኘም! እባክዎ በደንብ ብርሃን ባለበት ቦታ ይሞክሩ።");
         return;
       }
 
+      // Convert to File for upload
       const response = await fetch(imageSrc);
       const blob = await response.blob();
       const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
 
       setCameraOn(false);
       setStatus("Ready");
-
-      if (onCapture) {
-        onCapture(file, imageSrc, detection.descriptor);
-      }
+      if (onCapture) onCapture(file, imageSrc, detection);
     } catch (err) {
-      console.error(err);
       setStatus("Ready");
-      alert("ስህተት ተፈጠረ።");
+      alert("ስህተት ተፈጠረ። እባክዎ እንደገና ይሞክሩ።");
     }
   }, [onCapture, isModelLoaded]);
 
-  // UI ክፍል...
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto p-4">
       {!cameraOn && !preview && (
-        <button type="button" onClick={() => setCameraOn(true)} disabled={!isModelLoaded}
-                className="w-full bg-blue-600 disabled:bg-gray-400 text-white py-2.5 rounded-lg font-medium transition">
-          {isModelLoaded ? "📷 Open Camera" : "⌛ Loading AI Models..."}
+        <button 
+          onClick={() => setCameraOn(true)} 
+          disabled={!isModelLoaded}
+          className="w-full bg-blue-600 disabled:bg-gray-400 text-white py-3 rounded-xl font-bold transition-all hover:bg-blue-700"
+        >
+          {isModelLoaded ? "📷 ካሜራ ይክፈቱ" : "⌛ AI ሞዴሎችን በመጫን ላይ..."}
         </button>
       )}
 
       {cameraOn && (
-        <div className="space-y-3">
-          <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" videoConstraints={{ width: 400, height: 400, facingMode }} className="w-full" />
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setFacingMode(prev => prev === "user" ? "environment" : "user")} className="bg-blue-600 text-white px-4 rounded-lg">🔄</button>
-            <button type="button" onClick={capture} className="flex-1 bg-green-600 text-white py-2 rounded-lg">{status}</button>
-            <button type="button" onClick={() => setCameraOn(false)} className="flex-1 bg-gray-600 text-white py-2 rounded-lg">Cancel</button>
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-2xl border-4 border-blue-100">
+            <Webcam 
+              ref={webcamRef} 
+              audio={false} 
+              screenshotFormat="image/jpeg" 
+              videoConstraints={{ facingMode }} 
+              className="w-full aspect-square object-cover" 
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setFacingMode(prev => prev === "user" ? "environment" : "user")} className="p-3 bg-gray-200 rounded-lg">🔄</button>
+            <button onClick={capture} className="flex-1 bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700">{status}</button>
+            <button onClick={() => setCameraOn(false)} className="px-6 bg-red-500 text-white rounded-lg">ሰርዝ</button>
           </div>
         </div>
       )}
       
       {preview && !cameraOn && (
         <div className="space-y-3">
-          <img src={preview} alt="Result" className="w-full h-72 object-cover rounded-lg" />
-          <button type="button" onClick={() => { setCameraOn(true); onCapture(null, null, null); }} className="w-full bg-yellow-500 text-white py-2 rounded-lg">🔄 Retake</button>
+          <img src={preview} alt="Result" className="w-full rounded-lg shadow-lg" />
+          <button onClick={() => setCameraOn(true)} className="w-full bg-yellow-500 text-white py-2 rounded-lg font-bold">እንደገና ይሞክሩ</button>
         </div>
       )}
     </div>
