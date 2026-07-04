@@ -5,6 +5,20 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const webcamRef = useRef(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [facingMode, setFacingMode] = useState("user");
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+
+  // 1. ሞዴሎችን መጫን
+  useEffect(() => {
+    const loadModels = async () => {
+      const MODEL_URL = '/models'; 
+      await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+      await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+      setIsModelLoaded(true);
+      console.log("Face-api models loaded successfully!");
+    };
+    loadModels();
+  }, []);
 
   const videoConstraints = {
     width: 400,
@@ -12,129 +26,79 @@ const WebcamCapture = ({ onCapture, preview }) => {
     facingMode,
   };
 
-  // Reset component local state if the parent clears the preview (e.g. form reset)
   useEffect(() => {
-    if (!preview) {
-      setCameraOn(false);
-    }
+    if (!preview) setCameraOn(false);
   }, [preview]);
 
-  const capture = useCallback(() => {
+  // 2. ፊትን መለየት እና መያዝ (Capture & Detect)
+  const capture = useCallback(async () => {
     const imageSrc = webcamRef.current?.getScreenshot();
+    if (!imageSrc || !isModelLoaded) return;
 
-    if (!imageSrc) return;
+    // ፊትን ለመለየት ምስሉን ማዘጋጀት
+    const img = await window.faceapi.fetchImage(imageSrc);
+    const detection = await window.faceapi.detectSingleFace(img, new window.faceapi.TinyFaceDetectorOptions())
+                                           .withFaceLandmarks()
+                                           .withFaceDescriptor();
 
-    // Convert Base64 string to an image Blob
-    const byteString = atob(imageSrc.split(",")[1]);
-    const mimeString = imageSrc.split(",")[0].split(":")[1].split(";")[0];
-
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
+    if (!detection) {
+      alert("⚠️ ፊት አልተገኘም! እባክዎ ፊትዎን በግልጽ ያሳዩ።");
+      return;
     }
 
+    // ምስሉን ወደ File መቀየር
+    const byteString = atob(imageSrc.split(",")[1]);
+    const mimeString = imageSrc.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    
     const blob = new Blob([ab], { type: mimeString });
-
-    // Instantiating a native JS file constructor for direct uploads
-    const file = new File(
-      [blob],
-      `capture_${Date.now()}.jpg`,
-      { type: "image/jpeg" }
-    );
+    const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
 
     setCameraOn(false);
 
     if (onCapture) {
-      onCapture(file, imageSrc);
+      // ፋይሉን እና የፊቱን መለኪያ (descriptor) ለወላጅ ኮምፖነንት እንልካለን
+      onCapture(file, imageSrc, detection.descriptor);
     }
-  }, [onCapture]);
+  }, [onCapture, isModelLoaded]);
 
   const retake = () => {
     setCameraOn(true);
-    if (onCapture) {
-      onCapture(null, null);
-    }
+    if (onCapture) onCapture(null, null, null);
   };
 
   const handleCancel = () => {
     setCameraOn(false);
-    if (onCapture) {
-      onCapture(null, null);
-    }
+    if (onCapture) onCapture(null, null, null);
   };
 
   return (
     <div className="w-full max-w-md mx-auto">
-      {/* State 1: Camera closed and no image captured yet */}
       {!cameraOn && !preview && (
-        <button
-          type="button"
-          onClick={() => setCameraOn(true)}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition"
-        >
+        <button type="button" onClick={() => setCameraOn(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition">
           📷 Open Camera
         </button>
       )}
 
-      {/* State 2: Camera active feed view */}
       {cameraOn && (
         <div className="space-y-3">
-          <Webcam
-            ref={webcamRef}
-            audio={false}
-            screenshotFormat="image/jpeg"
-            videoConstraints={videoConstraints}
-            className="rounded-lg border shadow-sm w-full object-cover"
-          />
-
+          <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" videoConstraints={videoConstraints} className="rounded-lg border shadow-sm w-full object-cover" />
           <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                setFacingMode((prev) => (prev === "user" ? "environment" : "user"))
-              }
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg transition"
-            >
-              🔄 Toggle
+            <button type="button" onClick={() => setFacingMode((prev) => (prev === "user" ? "environment" : "user"))} className="bg-blue-600 text-white px-4 rounded-lg">🔄 Toggle</button>
+            <button type="button" onClick={capture} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium">
+              {isModelLoaded ? "Capture & Verify" : "Loading..."}
             </button>
-            
-            <button
-              type="button"
-              onClick={capture}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition"
-            >
-              Capture
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-medium transition"
-            >
-              Cancel
-            </button>
+            <button type="button" onClick={handleCancel} className="flex-1 bg-gray-600 text-white py-2 rounded-lg font-medium">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* State 3: Captured photo preview */}
       {preview && !cameraOn && (
         <div className="space-y-3">
-          <img
-            src={preview}
-            alt="Captured Result"
-            className="w-full h-72 object-cover rounded-lg border shadow-sm"
-          />
-
-          <button
-            type="button"
-            onClick={retake}
-            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg font-medium transition"
-          >
-            🔄 Retake Photo
-          </button>
+          <img src={preview} alt="Captured Result" className="w-full h-72 object-cover rounded-lg border shadow-sm" />
+          <button type="button" onClick={retake} className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium">🔄 Retake Photo</button>
         </div>
       )}
     </div>
