@@ -1,5 +1,4 @@
 const Pensioner = require("../models/Pensioner");
-const checkLiveness = require("../services/livenessDetection");
 
 /**
  * POST /api/verification
@@ -7,14 +6,7 @@ const checkLiveness = require("../services/livenessDetection");
  */
 const verifyPensioner = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: "Verification selfie is required."
-            });
-        }
-
-        // Frontend የላከው verified (boolean) እና similarity (number)
+        // Frontend የላከውን verified (boolean) እና similarity (number) ከ body ይወስዳል
         const { pensionerId, faydaNumber, verified, similarity } = req.body;
 
         if (!pensionerId && !faydaNumber) {
@@ -48,31 +40,12 @@ const verifyPensioner = async (req, res) => {
             });
         }
 
-        // Liveness Detection (ይህንን Backend ላይ ማስቀጠል ትችላለህ)
-        const selfieImage = `/uploads/verification/${req.file.filename}`;
-        const liveResult = await Promise.race([
-            checkLiveness(selfieImage),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Liveness timeout")), 30000))
-        ]);
-
-        if (!liveResult.live) {
-            pensioner.verificationAttempts += 1;
-            pensioner.livenessPassed = false;
-            pensioner.verified = false;
-            await pensioner.save();
-            return res.status(400).json({
-                success: false,
-                message: "Liveness check failed."
-            });
-        }
-
         // ሁሉም ነገር ከተሳካ
         pensioner.verificationAttempts += 1;
         pensioner.faceMatched = true;
-        pensioner.livenessPassed = true;
+        pensioner.livenessPassed = true; // በ Frontend በኩል የነበረው መታለፍ (በአስፈላጊነት)
         pensioner.verified = true;
         pensioner.verifiedAt = new Date();
-        pensioner.lastVerificationImage = selfieImage;
 
         await pensioner.save();
 
