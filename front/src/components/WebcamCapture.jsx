@@ -8,35 +8,32 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [status, setStatus] = useState("Idle");
 
-  // ሞዴሎችን በመጫን ላይ
-    // ሞዴሎችን በመጫን ላይ
+  // ሞዴሎችን በቅደም ተከተል በመጫን ላይ
   useEffect(() => {
     const loadModels = async () => {
       try {
         setStatus("Loading models...");
-        // ዱካው በትክክል '/models' መሆኑን እና በ public አቃፊ ውስጥ መኖራቸውን እርግጠኛ ይሁኑ
         const MODEL_URL = '/models'; 
         
-        // ሞዴሎችን መጫን
-        await Promise.all([
-          window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
+        // ሞዴሎችን በቅደም ተከተል መጫን ለሞባይል ብሮውዘር የተረጋጋ ነው
+        await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+        await window.faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
 
         setIsModelLoaded(true);
         setStatus("Ready");
-        console.log("✅ Face-api models loaded successfully!");
+        console.log("✅ All Face-api models loaded successfully!");
       } catch (error) {
         console.error("❌ Model load error:", error);
         setStatus("Error loading models");
-        alert("ሞዴሎችን መጫን አልተቻለም። እባክዎ ኢንተርኔትዎን ይፈትሹ ወይም የሞዴል ፋይሎቹ በ public/models ውስጥ መኖራቸውን ያረጋግጡ።");
+        alert("ሞዴሎችን መጫን አልተቻለም። እባክዎ ፋይሎቹ በ public/models ውስጥ መኖራቸውን ያረጋግጡ።");
       }
     };
 
     loadModels();
   }, []);
-
 
   const videoConstraints = {
     width: 400,
@@ -58,34 +55,41 @@ const WebcamCapture = ({ onCapture, preview }) => {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (!imageSrc) return;
 
-    setStatus("Analyzing...");
-    const img = await window.faceapi.fetchImage(imageSrc);
-    const detection = await window.faceapi.detectSingleFace(img, new window.faceapi.TinyFaceDetectorOptions())
-                                           .withFaceLandmarks()
-                                           .withFaceDescriptor();
+    try {
+      setStatus("Analyzing...");
+      const img = await window.faceapi.fetchImage(imageSrc);
+      
+      // ፊትን መለየት እና መረጃዎችን መውሰድ
+      const detection = await window.faceapi.detectSingleFace(
+        img, 
+        new window.faceapi.TinyFaceDetectorOptions()
+      )
+      .withFaceLandmarks()
+      .withFaceDescriptor()
+      .withFaceExpressions()
+      .withAgeAndGender();
 
-    if (!detection) {
+      if (!detection) {
+        setStatus("Ready");
+        alert("⚠️ ፊት አልተገኘም! እባክዎ ፊትዎን በግልጽ ያሳዩ።");
+        return;
+      }
+
+      // ምስሉን ወደ File መቀየር
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+
+      setCameraOn(false);
       setStatus("Ready");
-      alert("⚠️ ፊት አልተገኘም! እባክዎ ፊትዎን በግልጽ ያሳዩ።");
-      return;
-    }
 
-    // ምስሉን ወደ File መቀየር
-    const byteString = atob(imageSrc.split(",")[1]);
-    const mimeString = imageSrc.split(",")[0].split(":")[1].split(";")[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-    
-    const blob = new Blob([ab], { type: mimeString });
-    const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
-
-    setCameraOn(false);
-    setStatus("Ready");
-
-    if (onCapture) {
-      // ፋይሉን፣ ምስሉን እና የፊቱን መለኪያ (descriptor) ለወላጅ ኮምፖነንት እንልካለን
-      onCapture(file, imageSrc, detection.descriptor);
+      if (onCapture) {
+        onCapture(file, imageSrc, detection.descriptor);
+      }
+    } catch (err) {
+      console.error("Capture process error:", err);
+      setStatus("Ready");
+      alert("የፊት መለየቱ ሂደት ላይ ስህተት ተፈጥሯል።");
     }
   }, [onCapture, isModelLoaded]);
 
@@ -102,8 +106,8 @@ const WebcamCapture = ({ onCapture, preview }) => {
   return (
     <div className="w-full max-w-md mx-auto">
       {!cameraOn && !preview && (
-        <button type="button" onClick={() => setCameraOn(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition">
-          📷 Open Camera
+        <button type="button" onClick={() => setCameraOn(true)} className={`w-full ${isModelLoaded ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400"} text-white py-2.5 rounded-lg font-medium transition`}>
+          {isModelLoaded ? "📷 Open Camera" : "⌛ Loading AI Models..."}
         </button>
       )}
 
