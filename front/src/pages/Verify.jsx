@@ -6,7 +6,7 @@ import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
 import { searchPensioner, verifyPensioner } from "../services/api";
 
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 const API_URL = process.env.REACT_APP_API_URL.replace("/api", "");
 
 const Verify = () => {
