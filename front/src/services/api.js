@@ -75,10 +75,10 @@ export const verifyPensioner = (formData) =>
 
 
 export const createRenewal = (data) =>
-  api.post("/renewals", data);
+  API.post("/renewals", data);
 
 export const getCurrentRenewal = () =>
-  api.get("/renewals/current");
+  API.get("/renewals/current");
 
 
 // ==============================
