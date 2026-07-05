@@ -114,9 +114,33 @@ const Register = () => {
             <div><label className="block mb-2 font-semibold">Age</label><input type="number" name="age" value={formData.age} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
             <div><label className="block mb-2 font-semibold">Gender</label><select name="gender" value={formData.gender} onChange={handleChange} required className="w-full border rounded-lg p-3"><option value="">Select Gender</option><option>Male</option><option>Female</option></select></div>
             <div><label className="block mb-2 font-semibold">POESSA Branch</label><input type="text" name="poessaBranch" value={formData.poessaBranch} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
+            <div>
+  <label className="block mb-2 font-semibold">
+    Bank Name (Amharic)
+  </label>
+  <input
+    type="text"
+    name="bankNameAmh"
+    value={formData.bankNameAmh}
+    onChange={handleChange}
+    className="w-full border rounded-lg p-3"
+  />
+</div>
             <div><label className="block mb-2 font-semibold">Bank Name (English)</label><input type="text" name="bankNameEng" value={formData.bankNameEng} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
             <div><label className="block mb-2 font-semibold">Bank Branch</label><input type="text" name="bankBranch" value={formData.bankBranch} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
             <div><label className="block mb-2 font-semibold">Pension Amount</label><input type="number" name="pensionAmount" value={formData.pensionAmount} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
+            <div>
+  <label className="block mb-2 font-semibold">
+    Address (Amharic)
+  </label>
+  <textarea
+    rows="2"
+    name="addressAmh"
+    value={formData.addressAmh}
+    onChange={handleChange}
+    className="w-full border rounded-lg p-3"
+  />
+</div>
             <div><label className="block mb-2 font-semibold">Address (English)</label><textarea rows="2" name="addressEng" value={formData.addressEng} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
             <div><label className="block mb-2 font-semibold">Issue Date</label><input type="date" name="issueDate" value={formData.issueDate} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
             <div><label className="block mb-2 font-semibold">Expiry Date</label><input type="date" name="expiryDate" value={formData.expiryDate} onChange={handleChange} required className="w-full border rounded-lg p-3" /></div>
