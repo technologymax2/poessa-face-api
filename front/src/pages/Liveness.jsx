@@ -24,7 +24,6 @@ const Liveness = () => {
   const steps = [
     "👈 Look Left",
     "👉 Look Right",
-    "😉 Blink",
     "😊 Smile",
     "✅ Completed",
   ];
@@ -111,27 +110,15 @@ const checkLiveness = async () => {
   }
 
 
-// Step 2 → Blink
+// Step 2 → Smile
 else if (step === 2) {
-  const leftEAR =
-    Math.abs(leftEye[1].y - leftEye[5].y) +
-    Math.abs(leftEye[2].y - leftEye[4].y);
-
-  if (leftEAR < 6) {
+  if (detection.expressions.happy > 0.8) {
     setStep(3);
     setInstruction(steps[3]);
-  }
-}
-
-  // Step 3 → Smile
-else if (step === 3) {
-  if (detection.expressions.happy > 0.8) {
-    setStep(4);
-    setInstruction(steps[4]);
 
     alert("✅ Liveness Passed");
 
-    // ከዚህ በኋላ Backend Verification እንጠራለን
+    // እዚህ backend verification እንጠራለን
   }
 }
   
