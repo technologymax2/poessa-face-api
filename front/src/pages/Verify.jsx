@@ -18,7 +18,6 @@ const Verify = () => {
   const [imageFile, setImageFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [imageMethod, setImageMethod] = useState("camera");
-  const [verificationResult, setVerificationResult] = useState(null);
   const [faceDescriptor, setFaceDescriptor] = useState(null); // አዲስ state
   const navigate = useNavigate();
 
@@ -26,7 +25,6 @@ const Verify = () => {
     if (!query.trim()) return;
     try {
       setLoading(true);
-      setVerificationResult(null);
       setCapturedImage(null);
       setImageFile(null);
       setPreview(null);
@@ -141,41 +139,7 @@ const Verify = () => {
 
                 <button type="button" onClick={handleVerifyIdentity} className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">Verify Identity</button>
 
-                {verificationResult && (
-  <div
-    className={`mt-6 p-5 rounded-lg border ${
-      verificationResult.verified
-        ? "bg-green-50 border-green-400"
-        : "bg-red-50 border-red-400"
-    }`}
-  >
-    <p>
-      <strong>Face Match:</strong>{" "}
-      {verificationResult.faceMatched ? "✅ Yes" : "❌ No"}
-    </p>
-
-    <p>
-      <strong>Status:</strong>{" "}
-      {verificationResult.verified
-        ? "✅ VERIFIED"
-        : "❌ NOT VERIFIED"}
-    </p>
-
-    <p>
-      <strong>Distance:</strong>{" "}
-      {verificationResult.distance?.toFixed(4)}
-    </p>
-
-    <p>
-      <strong>Similarity:</strong>{" "}
-      {(verificationResult.similarity * 100).toFixed(2)}%
-    </p>
-
-    <p className="mt-3 font-semibold">
-      {verificationResult.message}
-    </p>
-  </div>
-)}
+                
               </div>
             </div>
           )}
