@@ -1,6 +1,7 @@
 // controllers/pensionerController.js
 
 const Pensioner = require("../models/Pensioner");
+const Renewal = require("../models/Renewal");
 const path = require("path");
 
 /**
@@ -172,63 +173,69 @@ const getPensionerById = async (req, res) => {
  * Search Pensioner
  * GET /api/pensioners/search/:keyword
  */
+/**
+ * Search Pensioner
+ * GET /api/pensioners/search/:keyword
+ */
 const searchPensioner = async (req, res) => {
+  try {
+    const keyword = req.params.keyword;
 
-    try {
+    const pensioners = await Pensioner.find({
+      $or: [
+        {
+          pensionerId: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+        {
+          faydaNumber: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+        {
+          nameEng: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+        {
+          nameAmh: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+      ],
+    });
 
-        const keyword = req.params.keyword;
+    // Current active renewal
+    const renewal = await Renewal.findOne({ active: true });
 
-        const pensioners = await Pensioner.find({
+    // Add alreadyVerified flag
+    const data = pensioners.map((p) => {
+      const obj = p.toObject();
 
-            $or: [
+      obj.alreadyVerified =
+        renewal &&
+        p.lastRenewalId &&
+        p.lastRenewalId.toString() === renewal._id.toString();
 
-                {
-                    pensionerId: {
-                        $regex: keyword,
-                        $options: "i"
-                    }
-                },
+      return obj;
+    });
 
-                {
-                    faydaNumber: {
-                        $regex: keyword,
-                        $options: "i"
-                    }
-                },
-
-                {
-                    nameEng: {
-                        $regex: keyword,
-                        $options: "i"
-                    }
-                },
-
-                {
-                    nameAmh: {
-                        $regex: keyword,
-                        $options: "i"
-                    }
-                }
-
-            ]
-
-        });
-
-        res.status(200).json({
-            success: true,
-            count: pensioners.length,
-            data: pensioners
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-
-    }
-
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 /**
