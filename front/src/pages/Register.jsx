@@ -31,11 +31,11 @@ const Register = () => {
     setFaceDescriptor(descriptor);
   };
 
-  const handleUpload = (file, imgPreview) => {
-    setImageFile(file);
-    setPreview(imgPreview);
-    setFaceDescriptor(null); // Upload ሲደረግ face descriptor የለም
-  };
+  const handleUpload = (file, imgPreview, descriptor) => {
+  setImageFile(file);
+  setPreview(imgPreview);
+  setFaceDescriptor(descriptor);
+};
 
   const handleMethodChange = (method) => {
     setImageMethod(method);
