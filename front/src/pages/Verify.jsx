@@ -22,6 +22,7 @@ const Verify = () => {
   const [faceDescriptor, setFaceDescriptor] = useState(null); // አዲስ state
   const navigate = useNavigate();
   const [renewal, setRenewal] = useState(null);
+const [renewalLoading, setRenewalLoading] = useState(true);
 const [renewalStatus, setRenewalStatus] = useState("");
 
   const executeSearch = useCallback(async (query) => {
@@ -67,6 +68,22 @@ const loadRenewal = async () => {
   }
 };
 
+
+  useEffect(() => {
+  const loadRenewal = async () => {
+    try {
+      const res = await getCurrentRenewal();
+      setRenewal(res.data);
+    } catch (err) {
+      console.error(err);
+      setRenewal(null);
+    } finally {
+      setRenewalLoading(false);
+    }
+  };
+
+  loadRenewal();
+}, []);
   useEffect(() => {
     const pid = searchParams.get("pid");
     if (pid) {
@@ -118,6 +135,16 @@ const loadRenewal = async () => {
   });
 };
 
+
+if (renewalLoading) {
+  return (
+    <>
+      <Navbar />
+      <Loader fullScreen text="Loading Renewal..." />
+    </>
+  );
+}
+  
 if (renewalStatus === "NONE") {
   return (
     <>
@@ -213,9 +240,33 @@ if (renewalStatus === "EXPIRED") {
   return (
     <>
       <Navbar />
+
+      {renewal && !renewal.allowed && (
+  <div className="max-w-3xl mx-auto mt-10">
+    <div className="bg-yellow-100 border border-yellow-400 rounded-xl p-6">
+      <h2 className="text-2xl font-bold mb-3">
+        Pension Renewal
+      </h2>
+
+      <p className="mb-3">
+        {renewal.message}
+      </p>
+
+      <p>
+        <strong>Start:</strong>{" "}
+        {new Date(renewal.startDate).toLocaleString()}
+      </p>
+
+      <p>
+        <strong>End:</strong>{" "}
+        {new Date(renewal.endDate).toLocaleString()}
+      </p>
+    </div>
+  </div>
+)}
       {loading && <Loader fullScreen size="lg" text="Processing..." />}
-      
-      <div className="max-w-6xl mx-auto p-6">
+      {renewal?.allowed && (
+<div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-8">Pensioner Verification</h2>
           <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -261,6 +312,9 @@ if (renewalStatus === "EXPIRED") {
           )}
         </div>
       </div>
+
+)}
+      
     </>
   );
 };
