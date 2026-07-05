@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
+import { verifyPensioner } from "../services/api";
+
 
 const faceapi = window.faceapi;
 
@@ -20,6 +22,7 @@ const Liveness = () => {
 
   const [instruction, setInstruction] = useState("Loading AI...");
   const [step, setStep] = useState(0);
+  const [result, setResult] = useState(null);
 
   const steps = [
     "👈 Look Left",
@@ -76,6 +79,46 @@ const Liveness = () => {
       .withFaceExpressions();
   };
 
+  const finishVerification = async () => {
+  try {
+    setLoading(true);
+
+    const formData = new FormData();
+
+    formData.append("pensionerId", pensioner.pensionerId);
+
+    if (faceDescriptor) {
+      formData.append(
+        "faceDescriptor",
+        JSON.stringify(Array.from(faceDescriptor))
+      );
+    }
+
+    if (imageFile) {
+      formData.append("selfie", imageFile);
+    } else {
+      const blob = await (await fetch(capturedImage)).blob();
+
+      formData.append(
+        "selfie",
+        new File([blob], "selfie.jpg", {
+          type: "image/jpeg",
+        })
+      );
+    }
+
+    const res = await verifyPensioner(formData);
+
+    setResult(res.data.data);
+
+  } catch (err) {
+    console.error(err);
+    alert("Verification failed.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 const checkLiveness = async () => {
   const detection = await detectFace();
 
@@ -115,8 +158,7 @@ else if (step === 2) {
   if (detection.expressions.happy > 0.8) {
     setStep(3);
     setInstruction(steps[3]);
-
-    alert("✅ Liveness Passed");
+await finishVerification();
 
     // እዚህ backend verification እንጠራለን
   }
@@ -192,6 +234,19 @@ useEffect(() => {
 
           </div>
 
+
+{result && (
+  <div className="mt-6 p-4 rounded-lg border bg-green-50">
+    <p><strong>Verified:</strong> {result.verified ? "✅ Yes" : "❌ No"}</p>
+
+    <p><strong>Face Match:</strong> {result.faceMatched ? "✅ Yes" : "❌ No"}</p>
+
+    <p><strong>Liveness:</strong> {result.livenessPassed ? "✅ Passed" : "❌ Failed"}</p>
+
+    <p><strong>Similarity:</strong> {(result.similarity * 100).toFixed(2)}%</p>
+  </div>
+)}
+          
         </div>
 
       </div>
