@@ -5,6 +5,7 @@ import WebcamCapture from "../components/WebcamCapture";
 import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
 import { searchPensioner, verifyPensioner } from "../services/api";
+import { getCurrentRenewal } from "../services/api";
 
 import { useNavigate } from "react-router-dom";
 const API_URL = process.env.REACT_APP_API_URL.replace("/api", "");
@@ -20,6 +21,8 @@ const Verify = () => {
   const [imageMethod, setImageMethod] = useState("camera");
   const [faceDescriptor, setFaceDescriptor] = useState(null); // አዲስ state
   const navigate = useNavigate();
+  const [renewal, setRenewal] = useState(null);
+const [renewalStatus, setRenewalStatus] = useState("");
 
   const executeSearch = useCallback(async (query) => {
     if (!query.trim()) return;
@@ -43,6 +46,26 @@ const Verify = () => {
       setLoading(false);
     }
   }, []);
+
+
+  useEffect(() => {
+  loadRenewal();
+}, []);
+
+const loadRenewal = async () => {
+  try {
+    const res = await getCurrentRenewal();
+
+    setRenewal(res.data.data);
+    setRenewalStatus(res.data.status);
+
+  } catch (err) {
+    console.error(err);
+
+    setRenewal(null);
+    setRenewalStatus("NONE");
+  }
+};
 
   useEffect(() => {
     const pid = searchParams.get("pid");
@@ -94,6 +117,99 @@ const Verify = () => {
     },
   });
 };
+
+if (renewalStatus === "NONE") {
+  return (
+    <>
+      <Navbar />
+      <div className="max-w-3xl mx-auto mt-16">
+        <div className="bg-yellow-100 border border-yellow-400 rounded-xl p-8 text-center">
+          <h2 className="text-2xl font-bold mb-3">
+            No Renewal Available
+          </h2>
+
+          <p>
+            The administrator has not published a renewal period.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+
+  if (renewalStatus === "NOT_STARTED") {
+  return (
+    <>
+      <Navbar />
+
+      <div className="max-w-3xl mx-auto mt-16">
+
+        <div className="bg-blue-100 border border-blue-400 rounded-xl p-8 text-center">
+
+          <h2 className="text-2xl font-bold mb-3">
+            Renewal Has Not Started
+          </h2>
+
+          <p className="mb-3">
+            {renewal?.message}
+          </p>
+
+          <p>
+            Starts on
+          </p>
+
+          <h3 className="font-bold text-xl">
+            {new Date(
+              renewal.startDate
+            ).toLocaleString()}
+          </h3>
+
+        </div>
+
+      </div>
+
+    </>
+  );
+}
+
+
+if (renewalStatus === "EXPIRED") {
+  return (
+    <>
+      <Navbar />
+
+      <div className="max-w-3xl mx-auto mt-16">
+
+        <div className="bg-red-100 border border-red-400 rounded-xl p-8 text-center">
+
+          <h2 className="text-2xl font-bold mb-3">
+            Renewal Period Has Ended
+          </h2>
+
+          <p className="mb-3">
+            {renewal?.message}
+          </p>
+
+          <p>
+            Ended on
+          </p>
+
+          <h3 className="font-bold text-xl">
+            {new Date(
+              renewal.endDate
+            ).toLocaleString()}
+          </h3>
+
+        </div>
+
+      </div>
+
+    </>
+  );
+}
+
+  
   return (
     <>
       <Navbar />
