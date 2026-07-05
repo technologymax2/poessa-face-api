@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 
