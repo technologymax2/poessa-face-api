@@ -71,6 +71,16 @@ export const verifyPensioner = (formData) =>
       "Content-Type": "multipart/form-data",
     },
   });
+
+
+
+export const createRenewal = (data) =>
+  api.post("/renewals", data);
+
+export const getCurrentRenewal = () =>
+  api.get("/renewals/current");
+
+
 // ==============================
 // Dashboard
 // ==============================
