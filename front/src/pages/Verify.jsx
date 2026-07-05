@@ -119,12 +119,13 @@ const Verify = () => {
     console.log("Verify Response:", res.data);
 
     setVerificationResult({
-      verified: res.data.data.verified,
-      faceMatched: res.data.data.faceMatched,
-      livenessPassed: res.data.data.livenessPassed,
-      similarity: res.data.similarity,
-      message: res.data.message,
-    });
+  verified: res.data.data.verified,
+  faceMatched: res.data.data.faceMatched,
+  livenessPassed: res.data.data.livenessPassed,
+  distance: res.data.data.distance,
+  similarity: res.data.data.similarity,
+  message: res.data.message,
+});
   } catch (err) {
     console.error(err);
 
@@ -183,12 +184,40 @@ const Verify = () => {
                 <button type="button" onClick={handleVerifyIdentity} className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">Verify Identity</button>
 
                 {verificationResult && (
-                  <div className={`mt-6 p-5 rounded-lg border ${verificationResult.verified ? "bg-green-50 border-green-400" : "bg-red-50 border-red-400"}`}>
-                    <p><strong>Face Match:</strong> {verificationResult.faceMatched ? "✅ Yes" : "❌ No"}</p>
-                    <p><strong>Status:</strong> {verificationResult.verified ? "✅ VERIFIED" : "❌ NOT VERIFIED"}</p>
-                    <p className="mt-3 font-semibold">{verificationResult.message}</p>
-                  </div>
-                )}
+  <div
+    className={`mt-6 p-5 rounded-lg border ${
+      verificationResult.verified
+        ? "bg-green-50 border-green-400"
+        : "bg-red-50 border-red-400"
+    }`}
+  >
+    <p>
+      <strong>Face Match:</strong>{" "}
+      {verificationResult.faceMatched ? "✅ Yes" : "❌ No"}
+    </p>
+
+    <p>
+      <strong>Status:</strong>{" "}
+      {verificationResult.verified
+        ? "✅ VERIFIED"
+        : "❌ NOT VERIFIED"}
+    </p>
+
+    <p>
+      <strong>Distance:</strong>{" "}
+      {verificationResult.distance?.toFixed(4)}
+    </p>
+
+    <p>
+      <strong>Similarity:</strong>{" "}
+      {(verificationResult.similarity * 100).toFixed(2)}%
+    </p>
+
+    <p className="mt-3 font-semibold">
+      {verificationResult.message}
+    </p>
+  </div>
+)}
               </div>
             </div>
           )}
