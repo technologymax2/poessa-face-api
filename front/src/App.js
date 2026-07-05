@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import ViewPensioner from "./pages/ViewPensioner";
 import EditPensioner from "./pages/EditPensioner";
 import Liveness from "./pages/Liveness";
+import Renewal from "./pages/Renewal";
 
 // Components
 import PrivateRoute from "./components/PrivateRoute";
@@ -41,6 +42,11 @@ function App() {
     path="/liveness"
     element={<Liveness />}
 />
+<Route
+  path="/renewal"
+  element={<Renewal />}
+/>
+      
         </Route>
 
         {/* 404 Page */}
