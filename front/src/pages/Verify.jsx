@@ -68,6 +68,8 @@ const loadRenewal = async () => {
 
     setRenewal(null);
     setRenewalStatus("NONE");
+  } finally {
+    setRenewalLoading(false);
   }
 };
 
@@ -82,11 +84,10 @@ const loadRenewal = async () => {
   }, [searchParams, executeSearch]);
 
   const handleSearchClick = () => {
-
-  if (!renewalStatus?.active) {
-    alert(renewalStatus?.message);
-    return;
-  }
+if (renewalStatus !== "ACTIVE") {
+  alert("Renewal is not currently active.");
+  return;
+}
 
   if (!search.trim()) {
     alert("Enter Pensioner ID or Fayda Number.");
@@ -239,31 +240,9 @@ if (renewalStatus === "EXPIRED") {
     <>
       <Navbar />
 
-      {renewal && !renewal.allowed && (
-  <div className="max-w-3xl mx-auto mt-10">
-    <div className="bg-yellow-100 border border-yellow-400 rounded-xl p-6">
-      <h2 className="text-2xl font-bold mb-3">
-        Pension Renewal
-      </h2>
 
-      <p className="mb-3">
-        {renewal.message}
-      </p>
-
-      <p>
-        <strong>Start:</strong>{" "}
-        {new Date(renewal.startDate).toLocaleString()}
-      </p>
-
-      <p>
-        <strong>End:</strong>{" "}
-        {new Date(renewal.endDate).toLocaleString()}
-      </p>
-    </div>
-  </div>
-)}
       {loading && <Loader fullScreen size="lg" text="Processing..." />}
-      {renewal?.allowed && (
+      {renewalStatus === "ACTIVE" && (
 <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-8">Pensioner Verification</h2>
@@ -305,12 +284,12 @@ if (renewalStatus === "EXPIRED") {
                 <button
   type="button"
   onClick={handleVerifyIdentity}
-  disabled={!renewalStatus?.active}
+  disabled={renewalStatus !== "ACTIVE"}
   className={`w-full mt-6 py-3 rounded-lg text-white ${
-    renewalStatus?.active
-      ? "bg-green-600 hover:bg-green-700"
-      : "bg-gray-400 cursor-not-allowed"
-  }`}
+  renewalStatus === "ACTIVE"
+    ? "bg-green-600 hover:bg-green-700"
+    : "bg-gray-400 cursor-not-allowed"
+}`}
 >
   Verify Identity
 </button>
