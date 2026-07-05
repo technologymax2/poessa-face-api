@@ -178,7 +178,9 @@ const Verify = () => {
                 {imageMethod === "camera" ? (
                   <WebcamCapture onCapture={handleCapture} preview={preview} />
                 ) : (
-                  <ImageUpload onImageSelect={handleUpload} preview={preview} />
+                  <ImageUpload
+    onResult={handleUpload}
+/>
                 )}
 
                 <button type="button" onClick={handleVerifyIdentity} className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">Verify Identity</button>
