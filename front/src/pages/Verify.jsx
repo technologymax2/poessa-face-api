@@ -5,7 +5,11 @@ import WebcamCapture from "../components/WebcamCapture";
 import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
 import { searchPensioner, verifyPensioner } from "../services/api";
-import { getCurrentRenewal } from "../services/api";
+import {
+  searchPensioner,
+  verifyPensioner,
+  getCurrentRenewal,
+} from "../services/api";
 
 import { useNavigate } from "react-router-dom";
 const API_URL = process.env.REACT_APP_API_URL.replace("/api", "");
@@ -84,6 +88,25 @@ const loadRenewal = async () => {
 
   loadRenewal();
 }, []);
+
+  useEffect(() => {
+  loadRenewal();
+}, []);
+
+const loadRenewal = async () => {
+  try {
+    const res = await getCurrentRenewal();
+
+    setRenewalStatus(res.data);
+  } catch (err) {
+    console.error(err);
+
+    setRenewalStatus({
+      active: false,
+      message: "Unable to load renewal schedule.",
+    });
+  }
+};
   useEffect(() => {
     const pid = searchParams.get("pid");
     if (pid) {
@@ -93,10 +116,19 @@ const loadRenewal = async () => {
   }, [searchParams, executeSearch]);
 
   const handleSearchClick = () => {
-    if (!search.trim()) { alert("Enter Pensioner ID or Fayda Number."); return; }
-    executeSearch(search);
-  };
 
+  if (!renewalStatus?.active) {
+    alert(renewalStatus?.message);
+    return;
+  }
+
+  if (!search.trim()) {
+    alert("Enter Pensioner ID or Fayda Number.");
+    return;
+  }
+
+  executeSearch(search);
+};
   // የፊት መለኪያውን (descriptor) ለመቀበል የተሻሻለ
   const handleCapture = (file, image, descriptor) => {
   console.log("Descriptor:", descriptor);
@@ -304,8 +336,18 @@ if (renewalStatus === "EXPIRED") {
 />
                 )}
 
-                <button type="button" onClick={handleVerifyIdentity} className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">Verify Identity</button>
-
+                <button
+  type="button"
+  onClick={handleVerifyIdentity}
+  disabled={!renewalStatus?.active}
+  className={`w-full mt-6 py-3 rounded-lg text-white ${
+    renewalStatus?.active
+      ? "bg-green-600 hover:bg-green-700"
+      : "bg-gray-400 cursor-not-allowed"
+  }`}
+>
+  Verify Identity
+</button>
                 
               </div>
             </div>
