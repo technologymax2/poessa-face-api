@@ -9,6 +9,7 @@ import Verify from "./pages/Verify";
 import Dashboard from "./pages/Dashboard";
 import ViewPensioner from "./pages/ViewPensioner";
 import EditPensioner from "./pages/EditPensioner";
+import Liveness from "./pages/Liveness";
 
 // Components
 import PrivateRoute from "./components/PrivateRoute";
@@ -35,6 +36,10 @@ function App() {
 <Route
   path="/pensioners/edit/:id"
   element={<EditPensioner />}
+/>
+    <Route
+    path="/liveness"
+    element={<Liveness />}
 />
         </Route>
 
