@@ -69,10 +69,14 @@ const Verify = () => {
 };
 
   const handleUpload = (file, imagePreview, descriptor) => {
+  console.log("File:", file);
+  console.log("Preview:", imagePreview);
+  console.log("Descriptor:", descriptor);
+
   setImageFile(file);
   setPreview(imagePreview);
   setCapturedImage(null);
-  setFaceDescriptor(descriptor); // ከ ImageUpload የሚመጣውን descriptor እዚህ አስገባው
+  setFaceDescriptor(descriptor);
 };
 
   const handleVerifyIdentity = async () => {
