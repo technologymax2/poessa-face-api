@@ -77,6 +77,51 @@ const Liveness = () => {
       .withFaceExpressions();
   };
 
+const checkLiveness = async () => {
+  const detection = await detectFace();
+
+  if (!detection) return;
+
+  const landmarks = detection.landmarks;
+
+  const leftEye = landmarks.getLeftEye();
+  const rightEye = landmarks.getRightEye();
+  const nose = landmarks.getNose();
+
+  const leftX = leftEye[0].x;
+  const rightX = rightEye[3].x;
+  const noseX = nose[3].x;
+
+  const center = (leftX + rightX) / 2;
+
+  // Step 0 → Look Left
+  if (step === 0) {
+    if (noseX > center + 10) {
+      setStep(1);
+      setInstruction(steps[1]);
+    }
+  }
+
+  // Step 1 → Look Right
+  else if (step === 1) {
+    if (noseX < center - 10) {
+      setStep(2);
+      setInstruction(steps[2]);
+    }
+  }
+};
+  
+useEffect(() => {
+  if (!modelsLoaded) return;
+
+  const interval = setInterval(() => {
+    checkLiveness();
+  }, 500);
+
+  return () => clearInterval(interval);
+
+}, [modelsLoaded, step]);
+  
   return (
     <>
       <Navbar />
@@ -107,7 +152,7 @@ const Liveness = () => {
               <div
                 className="bg-green-600 h-4 rounded-full"
                 style={{
-                  width: `${(step / 4) * 100}%`,
+                  width: `${((step + 1) / steps.length) * 100}%`
                 }}
               />
             </div>
