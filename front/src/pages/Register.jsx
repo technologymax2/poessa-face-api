@@ -133,7 +133,9 @@ const Register = () => {
                 <WebcamCapture onCapture={handleCapture} preview={preview} />
               ) : (
                 <div className="space-y-4">
-                  <ImageUpload onImageSelect={handleUpload} />
+                  <ImageUpload
+    onResult={handleUpload}
+/>
                   {preview && <img src={preview} alt="Upload Preview" className="w-64 h-64 object-cover rounded-lg border shadow-md" />}
                 </div>
               )}
