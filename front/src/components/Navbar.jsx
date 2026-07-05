@@ -55,6 +55,11 @@ const Navbar = () => {
                 <NavLink to="/dashboard" className={navLinkClass}>
                   Dashboard
                 </NavLink>
+
+<Link to="/renewal">
+    Renewal Management
+</Link>
+                
               </>
             )}
 
