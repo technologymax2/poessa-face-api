@@ -4,7 +4,6 @@ import Navbar from "../components/Navbar";
 import WebcamCapture from "../components/WebcamCapture";
 import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
-import { searchPensioner, verifyPensioner } from "../services/api";
 import {
   searchPensioner,
   verifyPensioner,
@@ -73,40 +72,7 @@ const loadRenewal = async () => {
 };
 
 
-  useEffect(() => {
-  const loadRenewal = async () => {
-    try {
-      const res = await getCurrentRenewal();
-      setRenewal(res.data);
-    } catch (err) {
-      console.error(err);
-      setRenewal(null);
-    } finally {
-      setRenewalLoading(false);
-    }
-  };
-
-  loadRenewal();
-}, []);
-
-  useEffect(() => {
-  loadRenewal();
-}, []);
-
-const loadRenewal = async () => {
-  try {
-    const res = await getCurrentRenewal();
-
-    setRenewalStatus(res.data);
-  } catch (err) {
-    console.error(err);
-
-    setRenewalStatus({
-      active: false,
-      message: "Unable to load renewal schedule.",
-    });
-  }
-};
+  
   useEffect(() => {
     const pid = searchParams.get("pid");
     if (pid) {
