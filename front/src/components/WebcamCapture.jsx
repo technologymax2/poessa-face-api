@@ -84,8 +84,9 @@ const WebcamCapture = ({ onCapture, preview }) => {
     <div className="w-full max-w-md mx-auto p-4">
       {!cameraOn && !preview && (
         <button 
-          onClick={() => setCameraOn(true)} 
-          disabled={!isModelLoaded}
+          type="button"
+  onClick={() => setCameraOn(true)}
+  disabled={!isModelLoaded}
           className="w-full bg-blue-600 disabled:bg-gray-400 text-white py-3 rounded-xl font-bold transition-all hover:bg-blue-700"
         >
           {isModelLoaded ? "📷 ካሜራ ይክፈቱ" : "⌛ AI ሞዴሎችን በመጫን ላይ..."}
@@ -104,9 +105,21 @@ const WebcamCapture = ({ onCapture, preview }) => {
             />
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setFacingMode(prev => prev === "user" ? "environment" : "user")} className="p-3 bg-gray-200 rounded-lg">🔄</button>
-            <button onClick={capture} className="flex-1 bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700">{status}</button>
-            <button onClick={() => setCameraOn(false)} className="px-6 bg-red-500 text-white rounded-lg">ሰርዝ</button>
+            <button
+  type="button"
+  onClick={() => setFacingMode(prev => prev === "user" ? "environment" : "user")}
+  className="p-3 bg-gray-200 rounded-lg"
+>🔄</button>
+            <button
+  type="button"
+  onClick={capture}
+  className="flex-1 bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700"
+>{status}</button>
+            <button
+  type="button"
+  onClick={() => setCameraOn(false)}
+  className="px-6 bg-red-500 text-white rounded-lg"
+>ሰርዝ</button>
           </div>
         </div>
       )}
@@ -114,7 +127,11 @@ const WebcamCapture = ({ onCapture, preview }) => {
       {preview && !cameraOn && (
         <div className="space-y-3">
           <img src={preview} alt="Result" className="w-full rounded-lg shadow-lg" />
-          <button onClick={() => setCameraOn(true)} className="w-full bg-yellow-500 text-white py-2 rounded-lg font-bold">እንደገና ይሞክሩ</button>
+          <button
+  type="button"
+  onClick={() => setCameraOn(true)}
+  className="w-full bg-yellow-500 text-white py-2 rounded-lg font-bold"
+>እንደገና ይሞክሩ</button>
         </div>
       )}
     </div>
