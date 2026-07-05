@@ -1,3 +1,5 @@
+
+
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 
@@ -9,8 +11,6 @@ const WebcamCapture = ({ onCapture, preview }) => {
   const [facingMode, setFacingMode] = useState("user");
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [status, setStatus] = useState("Idle");
-  const [challenge, setChallenge] = useState(null);
-const [livenessPassed, setLivenessPassed] = useState(false);
 
   // 1. Efficient Model Loading
   useEffect(() => {
@@ -36,50 +36,8 @@ const [livenessPassed, setLivenessPassed] = useState(false);
 }
     };
     loadModels();
-
-    setChallenge("LOOK_LEFT");
   }, []);
 
-
-  const checkLiveness = (detection) => {
-  const landmarks = detection.landmarks;
-
-  const leftEye = landmarks.getLeftEye();
-  const rightEye = landmarks.getRightEye();
-
-  const nose = landmarks.getNose();
-
-  const leftX = leftEye[0].x;
-  const rightX = rightEye[3].x;
-  const noseX = nose[3].x;
-
-  // LOOK LEFT
-  if (challenge === "LOOK_LEFT") {
-    if (noseX > (leftX + rightX) / 2 + 10) {
-      setChallenge("LOOK_RIGHT");
-      return false;
-    }
-  }
-
-  // LOOK RIGHT
-  if (challenge === "LOOK_RIGHT") {
-    if (noseX < (leftX + rightX) / 2 - 10) {
-      setChallenge("SMILE");
-      return false;
-    }
-  }
-
-  // SMILE
-  if (challenge === "SMILE") {
-    if (detection.expressions.happy > 0.8) {
-      setChallenge("DONE");
-      setLivenessPassed(true);
-      return true;
-    }
-  }
-
-  return false;
-};
   // 2. Optimized Capture Logic
   const capture = useCallback(async () => {
     if (!isModelLoaded || !webcamRef.current) return;
@@ -108,8 +66,6 @@ const [livenessPassed, setLivenessPassed] = useState(false);
         return;
       }
 
-
-      
       // Convert to File for upload
       const response = await fetch(imageSrc);
       const blob = await response.blob();
@@ -141,14 +97,6 @@ const [livenessPassed, setLivenessPassed] = useState(false);
       {cameraOn && (
         <div className="space-y-4">
           <div className="overflow-hidden rounded-2xl border-4 border-blue-100">
-           
-            <div className="text-center font-bold text-blue-700">
-  {challenge === "LOOK_LEFT" && "👈 Please Look Left"}
-  {challenge === "LOOK_RIGHT" && "👉 Please Look Right"}
-  {challenge === "SMILE" && "😊 Please Smile"}
-  {challenge === "DONE" && "✅ Liveness Passed"}
-</div>
-            
             <Webcam 
               ref={webcamRef} 
               audio={false} 
