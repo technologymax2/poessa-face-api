@@ -1,5 +1,5 @@
 const Pensioner = require("../models/Pensioner");
-
+const Renewal = require("../models/Renewal");
 function euclideanDistance(desc1, desc2) {
   if (!desc1 || !desc2) return 999;
   if (desc1.length !== desc2.length) return 999;
@@ -27,6 +27,25 @@ const verifyPensioner = async (req, res) => {
     const pensioner = await Pensioner.findOne({
       $or: [{ pensionerId }, { faydaNumber }],
     });
+
+    const renewal = await Renewal.findOne({ active: true });
+
+if (!renewal) {
+  return res.status(400).json({
+    success: false,
+    message: "There is no active renewal period.",
+  });
+}
+
+if (
+  pensioner.lastRenewalId &&
+  pensioner.lastRenewalId.toString() === renewal._id.toString()
+) {
+  return res.status(400).json({
+    success: false,
+    message: "You have already completed your renewal for this period.",
+  });
+}
 
     if (!pensioner) {
       return res.status(404).json({
@@ -68,6 +87,10 @@ const verifyPensioner = async (req, res) => {
     pensioner.livenessPassed = true;
     pensioner.verified = matched;
     pensioner.verifiedAt = matched ? new Date() : null;
+
+    if (matched) {
+  pensioner.lastRenewalId = renewal._id;
+}
 
     if (req.file) {
       pensioner.lastVerificationImage =
