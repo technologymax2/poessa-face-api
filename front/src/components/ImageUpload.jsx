@@ -53,13 +53,15 @@ const FaceProcessor = ({ onResult }) => {
     }
     
     // ውጤቱን ለፓረንት ኮምፖነንት መላክ
-    if (onResult) {
-  onResult({
+if (onResult) {
+  onResult(
     file,
-    preview: imageSrc,
-    detection,
-  });
+    imageSrc,
+    detection.descriptor
+  );
 }
+
+setStatus("Ready");
   };
 
   // 3. የካሜራ ቀረጻ
