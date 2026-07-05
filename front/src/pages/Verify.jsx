@@ -6,6 +6,7 @@ import ImageUpload from "../components/ImageUpload";
 import Loader from "../components/Loader";
 import { searchPensioner, verifyPensioner } from "../services/api";
 
+import { useNavigate, useSearchParams } from "react-router-dom";
 const API_URL = process.env.REACT_APP_API_URL.replace("/api", "");
 
 const Verify = () => {
@@ -19,6 +20,7 @@ const Verify = () => {
   const [imageMethod, setImageMethod] = useState("camera");
   const [verificationResult, setVerificationResult] = useState(null);
   const [faceDescriptor, setFaceDescriptor] = useState(null); // አዲስ state
+  const navigate = useNavigate();
 
   const executeSearch = useCallback(async (query) => {
     if (!query.trim()) return;
@@ -122,10 +124,20 @@ const Verify = () => {
 
     console.log("Verify Response:", res.data);
 
-    setVerificationResult({
-  verified: res.data.data.verified,
-  faceMatched: res.data.data.faceMatched,
-  livenessPassed: res.data.data.livenessPassed,
+    if (res.data.data.faceMatched) {
+  navigate("/liveness", {
+    state: {
+      pensioner,
+      verification: res.data.data,
+    },
+  });
+  return;
+}
+
+setVerificationResult({
+  verified: false,
+  faceMatched: false,
+  livenessPassed: false,
   distance: res.data.data.distance,
   similarity: res.data.data.similarity,
   message: res.data.message,
