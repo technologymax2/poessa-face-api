@@ -254,6 +254,19 @@ if (renewalStatus === "EXPIRED") {
             <button onClick={handleSearchClick} className="bg-blue-700 hover:bg-blue-800 text-white px-8 rounded-lg">Search</button>
           </div>
 
+{pensioner?.alreadyVerified && (
+  <div className="bg-green-100 border border-green-400 rounded-lg p-6 text-center mt-6">
+    <h2 className="text-2xl font-bold text-green-700">
+      ✅ Already Verified
+    </h2>
+
+    <p className="mt-2">
+      This pensioner has already completed the renewal verification for this period.
+    </p>
+  </div>
+)}
+
+          
           {pensioner && !pensioner.alreadyVerified && (
             <div className="grid md:grid-cols-2 gap-8 border-t pt-6">
               <div>
