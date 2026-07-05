@@ -52,10 +52,14 @@ const EditPensioner = () => {
 
   // ካሜራ ሲጠቀም
   const handleCapture = (file, imagePreview, descriptor) => {
-    setImageFile(file);
-    setPreview(imagePreview);
-    setFaceDescriptor(descriptor);
-  };
+  console.log("CAMERA FILE:", file);
+  console.log("CAMERA PREVIEW:", imagePreview);
+  console.log("CAMERA DESCRIPTOR:", descriptor);
+
+  setImageFile(file);
+  setPreview(imagePreview);
+  setFaceDescriptor(descriptor);
+};
 
   // Upload ሲጠቀም
   const handleUpload = (file, imgPreview, descriptor) => {
