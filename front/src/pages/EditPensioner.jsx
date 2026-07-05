@@ -58,11 +58,15 @@ const EditPensioner = () => {
   };
 
   // Upload ሲጠቀም
-  const handleUpload = (file, imgPreview) => {
-    setImageFile(file);
-    setPreview(imgPreview);
-    setFaceDescriptor(null); // Upload ሲሆን face descriptor የለም
-  };
+  const handleUpload = (file, imgPreview, descriptor) => {
+  console.log(file);
+  console.log(imgPreview);
+  console.log(descriptor);
+
+  setImageFile(file);
+  setPreview(imgPreview);
+  setFaceDescriptor(descriptor);
+};
 
   const handleMethodChange = (method) => {
     setImageMethod(method);
@@ -137,7 +141,9 @@ const EditPensioner = () => {
               {imageMethod === "camera" ? (
                 <WebcamCapture onCapture={handleCapture} preview={preview} />
               ) : (
-                <ImageUpload onImageSelect={handleUpload} />
+                <ImageUpload
+  onResult={handleUpload}
+/>
               )}
               {preview && !imageFile && <img src={preview} alt="Current" className="mt-4 w-60 rounded-lg border" />}
             </div>
