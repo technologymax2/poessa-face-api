@@ -251,22 +251,22 @@ const updatePensioner = async (req, res) => {
         }
 
         if (req.file) {
-            req.body.image = `/uploads/registration/${req.file.filename}`;
-        }
+    req.body.image = `/uploads/registration/${req.file.filename}`;
+}
 
-        const updated = await Pensioner.findByIdAndUpdate(
+// ✅ faceDescriptor string -> array
+if (req.body.faceDescriptor) {
+    req.body.faceDescriptor = JSON.parse(req.body.faceDescriptor);
+}
 
-            req.params.id,
-
-            req.body,
-
-            {
-                new: true,
-                runValidators: true
-            }
-
-        );
-
+const updated = await Pensioner.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    {
+        new: true,
+        runValidators: true
+    }
+);
         res.status(200).json({
 
             success: true,
