@@ -50,7 +50,12 @@ const authRoutes = require("./routes/authRoutes");
 const pensionerRoutes = require("./routes/pensionerRoutes");
 const verificationRoutes = require("./routes/verificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const renewalRoutes = require("./routes/renewalRoutes");
 
+
+
+
+app.use("/api/renewals", renewalRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/pensioners", pensionerRoutes);
 app.use("/api/verification", verificationRoutes);
