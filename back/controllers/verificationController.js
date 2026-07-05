@@ -1,5 +1,6 @@
 const Pensioner = require("../models/Pensioner");
 const Renewal = require("../models/Renewal");
+
 function euclideanDistance(desc1, desc2) {
   if (!desc1 || !desc2) return 999;
   if (desc1.length !== desc2.length) return 999;
@@ -24,33 +25,37 @@ const verifyPensioner = async (req, res) => {
       });
     }
 
+    // Find pensioner
     const pensioner = await Pensioner.findOne({
       $or: [{ pensionerId }, { faydaNumber }],
     });
-
-    const renewal = await Renewal.findOne({ active: true });
-
-if (!renewal) {
-  return res.status(400).json({
-    success: false,
-    message: "There is no active renewal period.",
-  });
-}
-
-if (
-  pensioner.lastRenewalId &&
-  pensioner.lastRenewalId.toString() === renewal._id.toString()
-) {
-  return res.status(400).json({
-    success: false,
-    message: "You have already completed your renewal for this period.",
-  });
-}
 
     if (!pensioner) {
       return res.status(404).json({
         success: false,
         message: "Pensioner not found.",
+      });
+    }
+
+    // Current renewal
+    const renewal = await Renewal.findOne({ active: true });
+
+    if (!renewal) {
+      return res.status(400).json({
+        success: false,
+        message: "There is no active renewal period.",
+      });
+    }
+
+    // Already verified for this renewal
+    if (
+      pensioner.lastRenewalId &&
+      pensioner.lastRenewalId.toString() === renewal._id.toString()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This pensioner has already completed verification for the current renewal period.",
       });
     }
 
@@ -79,7 +84,6 @@ if (
     );
 
     const threshold = 0.6;
-
     const matched = distance < threshold;
 
     pensioner.verificationAttempts += 1;
@@ -89,8 +93,8 @@ if (
     pensioner.verifiedAt = matched ? new Date() : null;
 
     if (matched) {
-  pensioner.lastRenewalId = renewal._id;
-}
+      pensioner.lastRenewalId = renewal._id;
+    }
 
     if (req.file) {
       pensioner.lastVerificationImage =
@@ -100,19 +104,18 @@ if (
     await pensioner.save();
 
     return res.status(200).json({
-  success: true,
-  message: matched
-    ? "Identity Verified Successfully."
-    : "Face does not match.",
-
-  data: {
-    verified: matched,
-    faceMatched: matched,
-    livenessPassed: true,
-    distance: Number(distance.toFixed(4)),
-    similarity: Number((1 - distance).toFixed(4)),
-  },
-});
+      success: true,
+      message: matched
+        ? "Identity Verified Successfully."
+        : "Face does not match.",
+      data: {
+        verified: matched,
+        faceMatched: matched,
+        livenessPassed: true,
+        distance: Number(distance.toFixed(4)),
+        similarity: Number((1 - distance).toFixed(4)),
+      },
+    });
   } catch (error) {
     console.error(error);
 
