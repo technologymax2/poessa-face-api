@@ -120,6 +120,18 @@ const EditPensioner = () => {
               </select>
             </div>
             <Input label="POESSA Branch" name="poessaBranch" value={formData.poessaBranch} onChange={handleChange} />
+            <div>
+  <label className="block mb-2 font-semibold">
+    Bank Name (Amharic)
+  </label>
+  <input
+    type="text"
+    name="bankNameAmh"
+    value={formData.bankNameAmh}
+    onChange={handleChange}
+    className="w-full border rounded-lg p-3"
+  />
+</div>
             <Input label="Bank Name" name="bankNameEng" value={formData.bankNameEng} onChange={handleChange} />
             <Input label="Bank Branch" name="bankBranch" value={formData.bankBranch} onChange={handleChange} />
             <Input label="Pension Amount" type="number" name="pensionAmount" value={formData.pensionAmount} onChange={handleChange} />
@@ -127,6 +139,19 @@ const EditPensioner = () => {
               <label className="font-semibold">Address (English)</label>
               <textarea rows="3" name="addressEng" value={formData.addressEng} onChange={handleChange} className="w-full border rounded-lg p-3" />
             </div>
+
+            <div>
+  <label className="block mb-2 font-semibold">
+    Address (Amharic)
+  </label>
+  <textarea
+    rows="2"
+    name="addressAmh"
+    value={formData.addressAmh}
+    onChange={handleChange}
+    className="w-full border rounded-lg p-3"
+  />
+</div>
             <div>
               <label className="font-semibold">Address (Amharic)</label>
               <textarea rows="3" name="addressAmh" value={formData.addressAmh} onChange={handleChange} className="w-full border rounded-lg p-3" />
