@@ -127,7 +127,13 @@ const pensionerSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+lastRenewalId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Renewal",
+  default: null,
+},
 
+    
     lastVerificationImage: {
       type: String,
       default: "",
