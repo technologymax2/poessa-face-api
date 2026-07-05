@@ -77,20 +77,19 @@ const verifyPensioner = async (req, res) => {
     await pensioner.save();
 
     return res.status(200).json({
-      success: true,
-      message: matched
-        ? "Identity Verified Successfully."
-        : "Face does not match.",
+  success: true,
+  message: matched
+    ? "Identity Verified Successfully."
+    : "Face does not match.",
 
-      similarity: Number((1 - distance).toFixed(4)),
-      distance,
-
-      data: {
-        verified: matched,
-        faceMatched: matched,
-        livenessPassed: true,
-      },
-    });
+  data: {
+    verified: matched,
+    faceMatched: matched,
+    livenessPassed: true,
+    distance: Number(distance.toFixed(4)),
+    similarity: Number((1 - distance).toFixed(4)),
+  },
+});
   } catch (error) {
     console.error(error);
 
