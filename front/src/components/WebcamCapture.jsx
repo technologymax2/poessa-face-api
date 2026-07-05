@@ -109,11 +109,6 @@ const [livenessPassed, setLivenessPassed] = useState(false);
       }
 
 
-
-if (!checkLiveness(detection)) {
-    setStatus("Follow the instruction");
-    return;
-}
       
       // Convert to File for upload
       const response = await fetch(imageSrc);
