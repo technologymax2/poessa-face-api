@@ -68,12 +68,12 @@ const Verify = () => {
   setImageFile(null);
 };
 
-  const handleUpload = (file, imagePreview) => {
-    setImageFile(file);
-    setPreview(imagePreview);
-    setCapturedImage(null);
-    setFaceDescriptor(null);
-  };
+  const handleUpload = (file, imagePreview, descriptor) => {
+  setImageFile(file);
+  setPreview(imagePreview);
+  setCapturedImage(null);
+  setFaceDescriptor(descriptor); // ከ ImageUpload የሚመጣውን descriptor እዚህ አስገባው
+};
 
   const handleVerifyIdentity = async () => {
   if (!capturedImage && !imageFile) {
