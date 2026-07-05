@@ -42,6 +42,9 @@ const [renewalStatus, setRenewalStatus] = useState("");
         return;
       }
       setPensioner(res.data.data[0]);
+      if (res.data.data[0].alreadyVerified) {
+  alert("This pensioner has already completed verification for the current renewal period.");
+}
     } catch (err) {
       console.error(err);
       setPensioner(null);
@@ -251,7 +254,7 @@ if (renewalStatus === "EXPIRED") {
             <button onClick={handleSearchClick} className="bg-blue-700 hover:bg-blue-800 text-white px-8 rounded-lg">Search</button>
           </div>
 
-          {pensioner && (
+          {pensioner && !pensioner.alreadyVerified && (
             <div className="grid md:grid-cols-2 gap-8 border-t pt-6">
               <div>
                 <h3 className="text-xl font-semibold mb-4">Registered Information</h3>
