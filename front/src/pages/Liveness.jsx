@@ -214,15 +214,17 @@ useEffect(() => {
 
           </div>
 
-          <div className="rounded-xl overflow-hidden border">
-
-            <Webcam
-              ref={webcamRef}
-              audio={false}
-              mirrored={true}
-              screenshotFormat="image/jpeg"
-              className="w-full"
-            />
+          <div className="flex justify-center mt-6">
+  <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-500 shadow-xl">
+    <Webcam
+      ref={webcamRef}
+      audio={false}
+      mirrored={true}
+      screenshotFormat="image/jpeg"
+      className="w-full h-full object-cover"
+    />
+  </div>
+</div>
 
           </div>
 
