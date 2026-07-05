@@ -32,7 +32,7 @@ const FaceProcessor = ({ onResult }) => {
   }, []);
 
   // 2. የጋራ የፊት መለየት ሂደት
-  const processImage = async (imageSrc) => {
+  const processImage = async (imageSrc, file = null) => {
     setStatus("Analyzing...");
     const img = await window.faceapi.fetchImage(imageSrc);
     
@@ -53,8 +53,13 @@ const FaceProcessor = ({ onResult }) => {
     }
     
     // ውጤቱን ለፓረንት ኮምፖነንት መላክ
-    if (onResult) onResult(detection);
-    setStatus("Ready");
+    if (onResult) {
+  onResult({
+    file,
+    preview: imageSrc,
+    detection,
+  });
+}
   };
 
   // 3. የካሜራ ቀረጻ
@@ -70,7 +75,7 @@ const FaceProcessor = ({ onResult }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
-        processImage(reader.result);
+        processImage(reader.result, file);
       };
       reader.readAsDataURL(file);
     }
