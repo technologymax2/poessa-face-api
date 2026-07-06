@@ -35,16 +35,6 @@ const [editing, setEditing] = useState(false);
   useEffect(() => {
     loadCurrent();
   }, []);
-const updateRenewal = async (req, res) => {
-  try {
-    const renewal = await Renewal.findById(req.params.id);
-
-    if (!renewal) {
-      return res.status(404).json({
-        success: false,
-        message: "Renewal not found.",
-      });
-    }
 
 
   const handleChange = (e) => {
