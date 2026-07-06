@@ -44,54 +44,7 @@ const updateRenewal = async (req, res) => {
       });
     }
 
-    const updated = await Renewal.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
 
-    res.json({
-      success: true,
-      message: "Renewal updated successfully.",
-      data: updated,
-    });
-
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-  const deleteRenewal = async (req, res) => {
-  try {
-    const renewal = await Renewal.findById(req.params.id);
-
-    if (!renewal) {
-      return res.status(404).json({
-        success: false,
-        message: "Renewal not found.",
-      });
-    }
-
-    await renewal.deleteOne();
-
-    res.json({
-      success: true,
-      message: "Renewal deleted successfully.",
-    });
-
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
   const handleChange = (e) => {
     setForm({
       ...form,
