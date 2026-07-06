@@ -38,11 +38,38 @@ const [editing, setEditing] = useState(false);
 
 
   const handleChange = (e) => {
+  setForm({
+    ...form,
+    [e.target.name]: e.target.value,
+  });
+};
+  const handleDelete = async () => {
+  if (!window.confirm("Delete this renewal?")) return;
+
+  try {
+    setLoading(true);
+
+    await deleteRenewal(current._id);
+
+    alert("Renewal deleted.");
+
+    setCurrent(null);
+
+    setEditing(false);
+
     setForm({
-      ...form,
-      [e.target.name]: e.target.value,
+      title: "",
+      message: "",
+      startDate: "",
+      endDate: "",
     });
-  };
+
+  } catch (err) {
+    alert(err.response?.data?.message || "Delete failed.");
+  } finally {
+    setLoading(false);
+  }
+};
 
     const handleDelete = async () => {
 
@@ -78,44 +105,51 @@ const [editing, setEditing] = useState(false);
 };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (
-      !form.title ||
-      !form.message ||
-      !form.startDate ||
-      !form.endDate
-    ) {
-      alert("Please fill all fields.");
-      return;
-    }
+  if (
+    !form.title ||
+    !form.message ||
+    !form.startDate ||
+    !form.endDate
+  ) {
+    alert("Please fill all fields.");
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
+    if (editing) {
+      await updateRenewal(current._id, form);
+
+      alert("Renewal updated successfully.");
+    } else {
       await createRenewal(form);
 
       alert("Renewal created successfully.");
-
-      setForm({
-        title: "",
-        message: "",
-        startDate: "",
-        endDate: "",
-      });
-
-      loadCurrent();
-    } catch (err) {
-      console.log(err);
-
-      alert(
-        err.response?.data?.message ||
-          "Unable to create renewal."
-      );
-    } finally {
-      setLoading(false);
     }
-  };
+
+    setEditing(false);
+
+    setForm({
+      title: "",
+      message: "",
+      startDate: "",
+      endDate: "",
+    });
+
+    loadCurrent();
+
+  } catch (err) {
+    alert(
+      err.response?.data?.message ||
+      "Operation failed."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
@@ -271,11 +305,11 @@ const [editing, setEditing] = useState(false);
 
             </div>
 
-            <button
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg"
-            >
-              Publish Renewal
-            </button>
+          <button
+  className="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg"
+>
+  {editing ? "Update Renewal" : "Publish Renewal"}
+</button>
 
           </form>
 
