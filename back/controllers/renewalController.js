@@ -91,6 +91,10 @@ exports.getCurrentRenewal = async (req, res) => {
     });
   }
 };
+// ==============================
+// Update Renewal
+// PUT /api/renewals/:id
+// ==============================
 exports.updateRenewal = async (req, res) => {
   try {
     const renewal = await Renewal.findById(req.params.id);
@@ -102,7 +106,7 @@ exports.updateRenewal = async (req, res) => {
       });
     }
 
-   exports.deleteRenewal = async (req, res) => {
+    const updated = await Renewal.findByIdAndUpdate(
       req.params.id,
       req.body,
       {
@@ -124,7 +128,11 @@ exports.updateRenewal = async (req, res) => {
   }
 };
 
-const deleteRenewal = async (req, res) => {
+// ==============================
+// Delete Renewal
+// DELETE /api/renewals/:id
+// ==============================
+exports.deleteRenewal = async (req, res) => {
   try {
     const renewal = await Renewal.findById(req.params.id);
 
