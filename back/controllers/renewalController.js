@@ -91,7 +91,7 @@ exports.getCurrentRenewal = async (req, res) => {
     });
   }
 };
-const updateRenewal = async (req, res) => {
+exports.updateRenewal = async (req, res) => {
   try {
     const renewal = await Renewal.findById(req.params.id);
 
@@ -102,7 +102,7 @@ const updateRenewal = async (req, res) => {
       });
     }
 
-    const updated = await Renewal.findByIdAndUpdate(
+   exports.deleteRenewal = async (req, res) => {
       req.params.id,
       req.body,
       {
