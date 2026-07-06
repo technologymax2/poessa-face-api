@@ -89,6 +89,10 @@ export const getDashboardStats = () =>
    API.get("/dashboard/stats");
 
 
+export const updateRenewal = (id, data) =>
+  API.put(`/renewals/${id}`, data);
 
+export const deleteRenewal = (id) =>
+  API.delete(`/renewals/${id}`);
 
 export default API;
