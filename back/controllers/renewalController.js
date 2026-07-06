@@ -148,9 +148,4 @@ const deleteRenewal = async (req, res) => {
     });
   }
 };
-module.exports = {
-  createRenewal,
-  getCurrentRenewal,
-  updateRenewal,
-  deleteRenewal,
-};
+
