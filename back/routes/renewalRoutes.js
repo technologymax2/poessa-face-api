@@ -9,7 +9,8 @@ const {
 router.post("/", createRenewal);
 
 router.get("/current", getCurrentRenewal);
-PUT /api/renewals/:id;
-DELETE /api/renewals/:id;
+router.put("/:id", updateRenewal);
+
+router.delete("/:id", deleteRenewal);
 
 module.exports = router;
