@@ -4,6 +4,8 @@ import Loader from "../components/Loader";
 import {
   createRenewal,
   getCurrentRenewal,
+  updateRenewal,
+  deleteRenewal,
 } from "../services/api";
 
 const RenewalManagement = () => {
