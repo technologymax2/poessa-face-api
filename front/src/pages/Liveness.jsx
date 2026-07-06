@@ -43,11 +43,12 @@ const Liveness = () => {
         const MODEL_URL =
           process.env.REACT_APP_MODEL_URL || "/models";
 
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-        ]);
+       await Promise.all([
+  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+  faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+]);
 
         setModelsLoaded(true);
         setInstruction(steps[0]);
@@ -71,12 +72,13 @@ const Liveness = () => {
     const img = await faceapi.fetchImage(screenshot);
 
     return await faceapi
-      .detectSingleFace(
-        img,
-        new faceapi.TinyFaceDetectorOptions()
-      )
-      .withFaceLandmarks()
-      .withFaceExpressions();
+  .detectSingleFace(
+    img,
+    new faceapi.TinyFaceDetectorOptions()
+  )
+  .withFaceLandmarks()
+  .withFaceExpressions()
+  .withFaceDescriptor();
   };
 
   const finishVerification = async () => {
@@ -119,6 +121,25 @@ const Liveness = () => {
   }
 };
 
+  const euclideanDistance = (a, b) => {
+  let sum = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    sum += Math.pow(a[i] - b[i], 2);
+  }
+
+  return Math.sqrt(sum);
+};
+  const distance = euclideanDistance(
+  Array.from(faceDescriptor),
+  Array.from(detection.descriptor)
+);
+
+if (distance > 0.6) {
+  alert("❌ This face does not match the selected pensioner.");
+  navigate("/verify");
+  return;
+}
 const checkLiveness = async () => {
   const detection = await detectFace();
 
