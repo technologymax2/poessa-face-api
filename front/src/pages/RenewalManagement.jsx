@@ -10,7 +10,7 @@ import {
 
 const RenewalManagement = () => {
   const [loading, setLoading] = useState(false);
-
+const [editing, setEditing] = useState(false);
   const [current, setCurrent] = useState(null);
 
   const [form, setForm] = useState({
@@ -53,6 +53,39 @@ const updateRenewal = async (req, res) => {
       [e.target.name]: e.target.value,
     });
   };
+
+    const handleDelete = async () => {
+
+  if (!window.confirm("Delete this renewal?")) return;
+
+  try {
+
+    setLoading(true);
+
+    await deleteRenewal(current._id);
+
+    alert("Renewal deleted.");
+
+    setCurrent(null);
+
+    setForm({
+      title: "",
+      message: "",
+      startDate: "",
+      endDate: "",
+    });
+
+  } catch (err) {
+
+    alert(err.response?.data?.message || "Delete failed.");
+
+  } finally {
+
+    setLoading(false);
+
+  }
+
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -145,6 +178,33 @@ const updateRenewal = async (req, res) => {
                 ).toLocaleString()}
               </p>
 
+              
+<div className="flex gap-3 mt-5">
+  <button
+    type="button"
+    onClick={() => {
+      setEditing(true);
+
+      setForm({
+        title: current.title,
+        message: current.message,
+        startDate: current.startDate.slice(0,16),
+        endDate: current.endDate.slice(0,16),
+      });
+    }}
+    className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg"
+  >
+    Edit
+  </button>
+
+  <button
+    type="button"
+    onClick={handleDelete}
+    className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg"
+  >
+    Delete
+  </button>
+</div>
             </div>
           )}
 
