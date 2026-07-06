@@ -10,7 +10,7 @@ import {
 
 const RenewalManagement = () => {
   const [loading, setLoading] = useState(false);
-const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [current, setCurrent] = useState(null);
 
   const [form, setForm] = useState({
@@ -26,9 +26,12 @@ const [editing, setEditing] = useState(false);
 
       if (res.data.success) {
         setCurrent(res.data.data);
+      } else {
+        setCurrent(null);
       }
     } catch (err) {
       console.log(err);
+      setCurrent(null);
     }
   };
 
@@ -36,94 +39,81 @@ const [editing, setEditing] = useState(false);
     loadCurrent();
   }, []);
 
-
   const handleChange = (e) => {
-  setForm({
-    ...form,
-    [e.target.name]: e.target.value,
-  });
-};
-
-
-    const handleDelete = async () => {
-
-  if (!window.confirm("Delete this renewal?")) return;
-
-  try {
-
-    setLoading(true);
-
-    await deleteRenewal(current._id);
-
-    alert("Renewal deleted.");
-
-    setCurrent(null);
-
     setForm({
-      title: "",
-      message: "",
-      startDate: "",
-      endDate: "",
+      ...form,
+      [e.target.name]: e.target.value,
     });
+  };
 
-  } catch (err) {
+  const handleDelete = async () => {
+    if (!window.confirm("Delete this renewal?")) return;
 
-    alert(err.response?.data?.message || "Delete failed.");
+    try {
+      setLoading(true);
 
-  } finally {
+      await deleteRenewal(current._id);
 
-    setLoading(false);
+      alert("Renewal deleted.");
 
-  }
+      setCurrent(null);
+      setEditing(false);
 
-};
+      setForm({
+        title: "",
+        message: "",
+        startDate: "",
+        endDate: "",
+      });
+
+      await loadCurrent();
+    } catch (err) {
+      alert(err.response?.data?.message || "Delete failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (
-    !form.title ||
-    !form.message ||
-    !form.startDate ||
-    !form.endDate
-  ) {
-    alert("Please fill all fields.");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    if (editing) {
-      await updateRenewal(current._id, form);
-
-      alert("Renewal updated successfully.");
-    } else {
-      await createRenewal(form);
-
-      alert("Renewal created successfully.");
+    if (
+      !form.title ||
+      !form.message ||
+      !form.startDate ||
+      !form.endDate
+    ) {
+      alert("Please fill all fields.");
+      return;
     }
 
-    setEditing(false);
+    try {
+      setLoading(true);
 
-    setForm({
-      title: "",
-      message: "",
-      startDate: "",
-      endDate: "",
-    });
+      if (editing) {
+        await updateRenewal(current._id, form);
+        alert("Renewal updated successfully.");
+      } else {
+        await createRenewal(form);
+        alert("Renewal created successfully.");
+      }
 
-    loadCurrent();
+      setEditing(false);
 
-  } catch (err) {
-    alert(
-      err.response?.data?.message ||
-      "Operation failed."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+      setForm({
+        title: "",
+        message: "",
+        startDate: "",
+        endDate: "",
+      });
+
+      await loadCurrent();
+    } catch (err) {
+      alert(err.response?.data?.message || "Operation failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -138,7 +128,6 @@ const [editing, setEditing] = useState(false);
       )}
 
       <div className="max-w-4xl mx-auto p-6">
-
         <div className="bg-white rounded-xl shadow-lg p-6">
 
           <h2 className="text-3xl font-bold text-blue-700 mb-6">
@@ -148,61 +137,58 @@ const [editing, setEditing] = useState(false);
           {current && (
             <div className="mb-8 p-5 rounded-lg bg-blue-50 border">
 
-              <h3 className="font-bold text-xl mb-2">
+              <h3 className="font-bold text-xl mb-3">
                 Current Renewal
               </h3>
 
               <p>
-                <strong>Title:</strong>{" "}
-                {current.title}
+                <strong>Title:</strong> {current.title}
               </p>
 
               <p>
-                <strong>Message:</strong>{" "}
-                {current.message}
+                <strong>Message:</strong> {current.message}
               </p>
 
               <p>
                 <strong>Start:</strong>{" "}
-                {new Date(
-                  current.startDate
-                ).toLocaleString()}
+                {new Date(current.startDate).toLocaleString()}
               </p>
 
               <p>
                 <strong>End:</strong>{" "}
-                {new Date(
-                  current.endDate
-                ).toLocaleString()}
+                {new Date(current.endDate).toLocaleString()}
               </p>
 
-              
-<div className="flex gap-3 mt-5">
-  <button
-    type="button"
-    onClick={() => {
-      setEditing(true);
+              <div className="flex gap-3 mt-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(true);
 
-      setForm({
-        title: current.title,
-        message: current.message,
-        startDate: current.startDate.slice(0,16),
-        endDate: current.endDate.slice(0,16),
-      });
-    }}
-    className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg"
-  >
-    Edit
-  </button>
+                    setForm({
+                      title: current.title,
+                      message: current.message,
+                      startDate: new Date(current.startDate)
+                        .toISOString()
+                        .slice(0, 16),
+                      endDate: new Date(current.endDate)
+                        .toISOString()
+                        .slice(0, 16),
+                    });
+                  }}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg"
+                >
+                  Edit
+                </button>
 
-  <button
-    type="button"
-    onClick={handleDelete}
-    className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg"
-  >
-    Delete
-  </button>
-</div>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           )}
 
@@ -212,7 +198,6 @@ const [editing, setEditing] = useState(false);
           >
 
             <div>
-
               <label className="block mb-2 font-semibold">
                 Title
               </label>
@@ -224,11 +209,9 @@ const [editing, setEditing] = useState(false);
                 className="w-full border rounded-lg p-3"
                 placeholder="Example: July 2026 Renewal"
               />
-
             </div>
 
             <div>
-
               <label className="block mb-2 font-semibold">
                 Message
               </label>
@@ -240,13 +223,11 @@ const [editing, setEditing] = useState(false);
                 onChange={handleChange}
                 className="w-full border rounded-lg p-3"
               />
-
             </div>
 
             <div className="grid md:grid-cols-2 gap-5">
 
               <div>
-
                 <label className="block mb-2 font-semibold">
                   Start Date
                 </label>
@@ -258,11 +239,9 @@ const [editing, setEditing] = useState(false);
                   onChange={handleChange}
                   className="w-full border rounded-lg p-3"
                 />
-
               </div>
 
               <div>
-
                 <label className="block mb-2 font-semibold">
                   End Date
                 </label>
@@ -274,21 +253,21 @@ const [editing, setEditing] = useState(false);
                   onChange={handleChange}
                   className="w-full border rounded-lg p-3"
                 />
-
               </div>
 
             </div>
 
-          <button
-  className="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg"
->
-  {editing ? "Update Renewal" : "Publish Renewal"}
-</button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg disabled:bg-gray-400"
+            >
+              {editing ? "Update Renewal" : "Publish Renewal"}
+            </button>
 
           </form>
 
         </div>
-
       </div>
     </>
   );
