@@ -130,6 +130,11 @@ const Liveness = () => {
 
   return Math.sqrt(sum);
 };
+
+const checkLiveness = async () => {
+  const detection = await detectFace();
+
+  if (!detection) return;
   const distance = euclideanDistance(
   Array.from(faceDescriptor),
   Array.from(detection.descriptor)
@@ -140,10 +145,6 @@ if (distance > 0.6) {
   navigate("/verify");
   return;
 }
-const checkLiveness = async () => {
-  const detection = await detectFace();
-
-  if (!detection) return;
 
   const landmarks = detection.landmarks;
 
