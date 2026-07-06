@@ -43,33 +43,7 @@ const [editing, setEditing] = useState(false);
     [e.target.name]: e.target.value,
   });
 };
-  const handleDelete = async () => {
-  if (!window.confirm("Delete this renewal?")) return;
 
-  try {
-    setLoading(true);
-
-    await deleteRenewal(current._id);
-
-    alert("Renewal deleted.");
-
-    setCurrent(null);
-
-    setEditing(false);
-
-    setForm({
-      title: "",
-      message: "",
-      startDate: "",
-      endDate: "",
-    });
-
-  } catch (err) {
-    alert(err.response?.data?.message || "Delete failed.");
-  } finally {
-    setLoading(false);
-  }
-};
 
     const handleDelete = async () => {
 
