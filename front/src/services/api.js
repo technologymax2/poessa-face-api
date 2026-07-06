@@ -86,6 +86,13 @@ export const getCurrentRenewal = () =>
 // ==============================
 
 export const getDashboardStats = () =>
-  API.get("/dashboard/stats");
+   API.get("/dashboard/stats");
+
+
+export const updateRenewal = (id, data) =>
+  axios.put(`${API_URL}/renewals/${id}`, data);
+
+export const deleteRenewal = (id) =>
+   API.delete(`${API_URL}/renewals/${id}`);
 
 export default API;
