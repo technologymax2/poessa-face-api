@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
 import {
+ import {
   createRenewal,
-  getCurrentRenewal,
+  getRenewals,
   updateRenewal,
   deleteRenewal,
 } from "../services/api";
@@ -41,26 +42,33 @@ useEffect(() => {
     });
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm("Delete this renewal?")) return;
+ const handleDelete = async (id) => {
+  if (!window.confirm("Delete this renewal?")) return;
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      await deleteRenewal(current._id);
+    await deleteRenewal(id);
 
-      alert("Renewal deleted.");
+    alert("Renewal deleted.");
 
-      setCurrent(null);
-      setEditing(false);
+    setEditing(false);
+    setCurrent(null);
 
-      setForm({
-        title: "",
-        message: "",
-        startDate: "",
-        endDate: "",
-      });
+    setForm({
+      title: "",
+      message: "",
+      startDate: "",
+      endDate: "",
+    });
 
+    loadRenewals();
+  } catch (err) {
+    alert(err.response?.data?.message || "Delete failed.");
+  } finally {
+    setLoading(false);
+  }
+};
       await loadCurrent();
     } catch (err) {
       alert(err.response?.data?.message || "Delete failed.");
@@ -102,7 +110,7 @@ useEffect(() => {
         endDate: "",
       });
 
-      await loadCurrent();
+     await loadRenewals();
     } catch (err) {
       alert(err.response?.data?.message || "Operation failed.");
     } finally {
