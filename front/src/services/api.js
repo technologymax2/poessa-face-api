@@ -95,4 +95,7 @@ export const updateRenewal = (id, data) =>
 export const deleteRenewal = (id) =>
   API.delete(`/renewals/${id}`);
 
+export const getRenewals = () =>
+  API.get("/renewals");
+
 export default API;
