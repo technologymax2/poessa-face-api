@@ -19,7 +19,7 @@ const Liveness = () => {
 
   const [loading, setLoading] = useState(true);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-
+const [completed, setCompleted] = useState(false);
   const [instruction, setInstruction] = useState("Loading AI...");
   const [step, setStep] = useState(0);
   const [result, setResult] = useState(null);
@@ -109,6 +109,7 @@ const Liveness = () => {
       );
     }
 
+    
     const res = await verifyPensioner(formData);
 
     setResult(res.data.data);
@@ -145,7 +146,12 @@ if (distance > 0.6) {
   navigate("/verify");
   return;
 }
+if (detection.expressions.happy > 0.8) {
+  setStep(3);
+  setInstruction("Verification Completed");
 
+  await finishVerification();
+}
   const landmarks = detection.landmarks;
 
   const leftEye = landmarks.getLeftEye();
@@ -236,17 +242,19 @@ useEffect(() => {
 
           </div>
 
-<div className="flex justify-center mt-6">
-  <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-500 shadow-xl">
-    <Webcam
-      ref={webcamRef}
-      audio={false}
-      mirrored={true}
-      screenshotFormat="image/jpeg"
-      className="w-full h-full object-cover"
-    />
+{!completed && (
+  <div className="flex justify-center mt-6">
+    <div className="w-[500px] h-[500px] rounded-full overflow-hidden border-8 border-blue-600 shadow-2xl">
+      <Webcam
+        ref={webcamRef}
+        audio={false}
+        mirrored
+        screenshotFormat="image/jpeg"
+        className="w-full h-full object-cover"
+      />
+    </div>
   </div>
-</div>
+)}
         
 
           <div className="mt-6 text-center text-gray-700">
@@ -258,15 +266,30 @@ useEffect(() => {
           </div>
 
 
-{result && (
-  <div className="mt-6 p-4 rounded-lg border bg-green-50">
-    <p><strong>Verified:</strong> {result.verified ? "✅ Yes" : "❌ No"}</p>
+{completed && result && (
+  <div className="mt-10 text-center">
 
-    <p><strong>Face Match:</strong> {result.faceMatched ? "✅ Yes" : "❌ No"}</p>
+    <div className="text-7xl mb-4">
+      ✅
+    </div>
 
-    <p><strong>Liveness:</strong> {result.livenessPassed ? "✅ Passed" : "❌ Failed"}</p>
+    <h2 className="text-3xl font-bold text-green-700">
+      Verification Successful
+    </h2>
 
-    <p><strong>Similarity:</strong> {(result.similarity * 100).toFixed(2)}%</p>
+    <p className="text-lg mt-3 text-gray-700">
+      Pensioner identity has been verified successfully.
+    </p>
+
+    <div className="mt-6">
+      <button
+        onClick={() => navigate("/verify")}
+        className="bg-blue-700 text-white px-8 py-3 rounded-lg"
+      >
+        Verify Another Pensioner
+      </button>
+    </div>
+
   </div>
 )}
           
