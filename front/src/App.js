@@ -11,7 +11,7 @@ import ViewPensioner from "./pages/ViewPensioner";
 import EditPensioner from "./pages/EditPensioner";
 import Liveness from "./pages/Liveness";
 import RenewalManagement from "./pages/RenewalManagement";
-
+import Report from "./pages/Report";
 // Components
 import PrivateRoute from "./components/PrivateRoute";
 
@@ -45,6 +45,10 @@ function App() {
 <Route
   path="/renewal"
   element={<RenewalManagement />}
+/>
+      <Route
+  path="/reports"
+  element={<Report />}
 />
       
         </Route>
