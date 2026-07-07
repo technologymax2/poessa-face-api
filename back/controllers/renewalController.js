@@ -156,4 +156,24 @@ exports.deleteRenewal = async (req, res) => {
     });
   }
 };
+// ==============================
+// GET ALL RENEWALS
+// ==============================
+exports.getRenewals = async (req, res) => {
+  try {
+    const renewals = await Renewal.find().sort({
+      createdAt: -1,
+    });
+
+    res.json({
+      success: true,
+      data: renewals,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
 
