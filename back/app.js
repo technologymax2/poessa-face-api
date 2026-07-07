@@ -51,7 +51,7 @@ const pensionerRoutes = require("./routes/pensionerRoutes");
 const verificationRoutes = require("./routes/verificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const renewalRoutes = require("./routes/renewalRoutes");
-
+const reportRoutes = require("./routes/reportRoutes");
 
 
 
@@ -60,6 +60,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/pensioners", pensionerRoutes);
 app.use("/api/verification", verificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reports", reportRoutes);
+
 
 /* ==========================================
    Health Check
