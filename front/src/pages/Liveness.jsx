@@ -22,6 +22,7 @@ const Liveness = () => {
 const [completed, setCompleted] = useState(false);
   const [instruction, setInstruction] = useState("Loading AI...");
   const [step, setStep] = useState(0);
+  const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
 
   const steps = [
