@@ -59,6 +59,9 @@ const Navbar = () => {
 <Link to="/renewal">
     Renewal Management
 </Link>
+                <NavLink to="/reports" className={navLinkClass}>
+  Reports
+</NavLink>
                 
               </>
             )}
