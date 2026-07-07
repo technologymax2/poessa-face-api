@@ -32,14 +32,20 @@ const Report = () => {
     loadRenewals();
   }, []);
 
-  const loadRenewals = async () => {
-    try {
-      const res = await getRenewalPeriods();
-      setRenewals(res.data.data);
-    } catch (err) {
-      console.log(err);
+const loadRenewals = async () => {
+  try {
+    const res = await getRenewalPeriods();
+
+    setRenewals(res.data.data);
+
+    if (res.data.data.length > 0) {
+      setRenewalId(res.data.data[0]._id);
     }
-  };
+
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   const generateReport = async () => {
     if (!renewalId) {
@@ -172,9 +178,7 @@ const exportToExcel = () => {
                 setRenewalId(e.target.value)
               }
             >
-              <option value="">
-                Select Renewal
-              </option>
+              
 
               {renewals.map((r) => (
                 <option
