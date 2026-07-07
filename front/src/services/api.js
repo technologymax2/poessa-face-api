@@ -98,4 +98,15 @@ export const deleteRenewal = (id) =>
 export const getRenewals = () =>
   API.get("/renewals");
 
+export const getRenewalPeriods = () =>
+  API.get("/reports/renewals");
+
+export const getRenewalReport = (renewalId, branch = "") =>
+  API.get("/reports/renewal", {
+    params: { renewalId, branch },
+  });
+
+export const getBranchSummary = (renewalId) =>
+  API.get(`/reports/branches/${renewalId}`);
+
 export default API;
