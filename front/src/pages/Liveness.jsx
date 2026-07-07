@@ -5,24 +5,26 @@ import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
 import { verifyPensioner } from "../services/api";
 
-
 const faceapi = window.faceapi;
 
 const Liveness = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
   const webcamRef = useRef(null);
 
-  const { pensioner, imageFile, capturedImage, faceDescriptor } =
-    location.state || {};
+  const {
+    pensioner,
+    imageFile,
+    capturedImage,
+    faceDescriptor,
+  } = location.state || {};
 
   const [loading, setLoading] = useState(true);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-const [completed, setCompleted] = useState(false);
+  const [completed, setCompleted] = useState(false);
+
   const [instruction, setInstruction] = useState("Loading AI...");
   const [step, setStep] = useState(0);
-  const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
 
   const steps = [
@@ -44,12 +46,12 @@ const [completed, setCompleted] = useState(false);
         const MODEL_URL =
           process.env.REACT_APP_MODEL_URL || "/models";
 
-       await Promise.all([
-  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-  faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-]);
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
 
         setModelsLoaded(true);
         setInstruction(steps[0]);
@@ -73,140 +75,147 @@ const [completed, setCompleted] = useState(false);
     const img = await faceapi.fetchImage(screenshot);
 
     return await faceapi
-  .detectSingleFace(
-    img,
-    new faceapi.TinyFaceDetectorOptions()
-  )
-  .withFaceLandmarks()
-  .withFaceExpressions()
-  .withFaceDescriptor();
+      .detectSingleFace(
+        img,
+        new faceapi.TinyFaceDetectorOptions()
+      )
+      .withFaceLandmarks()
+      .withFaceExpressions()
+      .withFaceDescriptor();
   };
 
-  const finishVerification = async () => {
-  try {
-    setLoading(true);
-
-    const formData = new FormData();
-
-    formData.append("pensionerId", pensioner.pensionerId);
-
-    if (faceDescriptor) {
-      formData.append(
-        "faceDescriptor",
-        JSON.stringify(Array.from(faceDescriptor))
-      );
-    }
-
-    if (imageFile) {
-      formData.append("selfie", imageFile);
-    } else {
-      const blob = await (await fetch(capturedImage)).blob();
-
-      formData.append(
-        "selfie",
-        new File([blob], "selfie.jpg", {
-          type: "image/jpeg",
-        })
-      );
-    }
-
-    
-    const res = await verifyPensioner(formData);
-
-    setResult(res.data.data);
-
-  } catch (err) {
-    console.error(err);
-    alert("Verification failed.");
-  } finally {
-    setLoading(false);
-  }
-};
-
   const euclideanDistance = (a, b) => {
-  let sum = 0;
+    let sum = 0;
 
-  for (let i = 0; i < a.length; i++) {
-    sum += Math.pow(a[i] - b[i], 2);
-  }
-
-  return Math.sqrt(sum);
-};
-
-const checkLiveness = async () => {
-  const detection = await detectFace();
-
-  if (!detection) return;
-  const distance = euclideanDistance(
-  Array.from(faceDescriptor),
-  Array.from(detection.descriptor)
-);
-
-if (distance > 0.6) {
-  alert("❌ This face does not match the selected pensioner.");
-  navigate("/verify");
-  return;
-}
-if (detection.expressions.happy > 0.8) {
-  setStep(3);
-  setInstruction("Verification Completed");
-
-  await finishVerification();
-}
-  const landmarks = detection.landmarks;
-
-  const leftEye = landmarks.getLeftEye();
-  const rightEye = landmarks.getRightEye();
-  const nose = landmarks.getNose();
-
-  const leftX = leftEye[0].x;
-  const rightX = rightEye[3].x;
-  const noseX = nose[3].x;
-
-  const center = (leftX + rightX) / 2;
-
-  // Step 0 → Look Left
-  if (step === 0) {
-    if (noseX > center + 10) {
-      setStep(1);
-      setInstruction(steps[1]);
+    for (let i = 0; i < a.length; i++) {
+      sum += Math.pow(a[i] - b[i], 2);
     }
-  }
 
-  // Step 1 → Look Right
-  else if (step === 1) {
-    if (noseX < center - 10) {
-      setStep(2);
-      setInstruction(steps[2]);
+    return Math.sqrt(sum);
+  };
+    const finishVerification = async () => {
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+
+      formData.append(
+        "pensionerId",
+        pensioner.pensionerId
+      );
+
+      if (faceDescriptor) {
+        formData.append(
+          "faceDescriptor",
+          JSON.stringify(Array.from(faceDescriptor))
+        );
+      }
+
+      if (imageFile) {
+        formData.append("selfie", imageFile);
+      } else {
+        const blob = await (
+          await fetch(capturedImage)
+        ).blob();
+
+        formData.append(
+          "selfie",
+          new File([blob], "selfie.jpg", {
+            type: "image/jpeg",
+          })
+        );
+      }
+
+      const res = await verifyPensioner(formData);
+
+      setResult(res.data.data);
+
+      if (res.data.data.verified) {
+        setCompleted(true);
+        setInstruction("✅ Verification Successful");
+      } else {
+        alert("Verification failed.");
+        navigate("/verify");
+      }
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        err.response?.data?.message ||
+        "Verification failed."
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
+  const checkLiveness = async () => {
+    if (completed) return;
 
-// Step 2 → Smile
-else if (step === 2) {
-  if (detection.expressions.happy > 0.8) {
-    setStep(3);
-    setInstruction(steps[3]);
-await finishVerification();
+    const detection = await detectFace();
 
-    // እዚህ backend verification እንጠራለን
-  }
-}
-  
-};
-  
-useEffect(() => {
-  if (!modelsLoaded) return;
+    if (!detection) return;
 
-  const interval = setInterval(() => {
-    checkLiveness();
-  }, 500);
+    const distance = euclideanDistance(
+      Array.from(faceDescriptor),
+      Array.from(detection.descriptor)
+    );
 
-  return () => clearInterval(interval);
+    if (distance > 0.6) {
+      alert("❌ This face does not match the selected pensioner.");
+      navigate("/verify");
+      return;
+    }
 
-}, [modelsLoaded, step]);
-  
-  return (
+    const landmarks = detection.landmarks;
+
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+    const nose = landmarks.getNose();
+
+    const leftX = leftEye[0].x;
+    const rightX = rightEye[3].x;
+    const noseX = nose[3].x;
+
+    const center = (leftX + rightX) / 2;
+
+    // Step 1 - Look Left
+    if (step === 0) {
+      if (noseX > center + 10) {
+        setStep(1);
+        setInstruction(steps[1]);
+      }
+    }
+
+    // Step 2 - Look Right
+    else if (step === 1) {
+      if (noseX < center - 10) {
+        setStep(2);
+        setInstruction(steps[2]);
+      }
+    }
+
+    // Step 3 - Smile
+    else if (step === 2) {
+      if (detection.expressions.happy > 0.8) {
+        setStep(3);
+        setInstruction(steps[3]);
+
+        await finishVerification();
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!modelsLoaded || completed) return;
+
+    const interval = setInterval(() => {
+      checkLiveness();
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [modelsLoaded, step, completed]);
+    return (
     <>
       <Navbar />
 
@@ -214,86 +223,113 @@ useEffect(() => {
         <Loader
           fullScreen
           size="lg"
-          text="Loading AI..."
+          text="Verifying..."
         />
       )}
 
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-6">
 
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-white rounded-xl shadow-lg p-8">
 
-          <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
+          <h2 className="text-3xl font-bold text-center text-blue-700 mb-8">
             Liveness Detection
           </h2>
 
-          <div className="mb-4 text-center">
+          {/* Hide Camera After Completion */}
+          {!completed ? (
+            <>
 
-            <div className="text-xl font-bold text-green-700">
-              {instruction}
+              <div className="text-center mb-6">
+
+                <div className="text-2xl font-bold text-green-700">
+                  {instruction}
+                </div>
+
+                <div className="mt-4 w-full bg-gray-200 rounded-full h-4">
+                  <div
+                    className="bg-green-600 h-4 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${((step + 1) / steps.length) * 100}%`,
+                    }}
+                  />
+                </div>
+
+              </div>
+
+              <div className="flex justify-center">
+
+                <div className="w-[520px] h-[520px] rounded-full overflow-hidden border-[10px] border-blue-600 shadow-2xl">
+
+                  <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    mirrored
+                    screenshotFormat="image/jpeg"
+                    className="w-full h-full object-cover"
+                  />
+
+                </div>
+
+              </div>
+
+              <div className="mt-6 text-center text-gray-600 font-medium">
+                {modelsLoaded
+                  ? "Camera Ready"
+                  : "Loading AI Models..."}
+              </div>
+
+            </>
+          ) : (
+            <div className="text-center py-20">
+
+              <div className="text-8xl mb-6">
+                ✅
+              </div>
+
+              <h2 className="text-4xl font-bold text-green-700">
+                Verification Successful
+              </h2>
+
+              <p className="text-gray-700 mt-4 text-lg">
+                Pensioner identity has been verified successfully.
+              </p>
+
+              {result && (
+                <div className="mt-8 bg-green-50 border border-green-200 rounded-xl p-6 max-w-lg mx-auto">
+
+                  <p className="mb-2">
+                    <strong>Verified:</strong>{" "}
+                    {result.verified ? "✅ Yes" : "❌ No"}
+                  </p>
+
+                  <p className="mb-2">
+                    <strong>Face Match:</strong>{" "}
+                    {result.faceMatched ? "✅ Yes" : "❌ No"}
+                  </p>
+
+                  <p className="mb-2">
+                    <strong>Liveness:</strong>{" "}
+                    {result.livenessPassed ? "✅ Passed" : "❌ Failed"}
+                  </p>
+
+                  <p>
+                    <strong>Similarity:</strong>{" "}
+                    {(result.similarity * 100).toFixed(2)}%
+                  </p>
+
+                </div>
+              )}
+
+              <button
+                onClick={() => navigate("/verify")}
+                className="mt-10 bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-lg text-lg"
+              >
+                Verify Another Pensioner
+              </button>
+
             </div>
+          )}
 
-            <div className="mt-3 w-full bg-gray-200 rounded-full h-4">
-              <div
-                className="bg-green-600 h-4 rounded-full"
-                style={{
-                  width: `${((step + 1) / steps.length) * 100}%`
-                }}
-              />
-            </div>
-
-          </div>
-
-{!completed && (
-  <div className="flex justify-center mt-6">
-    <div className="w-[500px] h-[500px] rounded-full overflow-hidden border-8 border-blue-600 shadow-2xl">
-      <Webcam
-        ref={webcamRef}
-        audio={false}
-        mirrored
-        screenshotFormat="image/jpeg"
-        className="w-full h-full object-cover"
-      />
-    </div>
-  </div>
-)}
-        
-
-          <div className="mt-6 text-center text-gray-700">
-
-            {modelsLoaded
-              ? "Camera Ready"
-              : "Loading Models..."}
-
-          </div>
-
-
-{completed && result && (
-  <div className="mt-10 text-center">
-
-    <div className="text-7xl mb-4">
-      ✅
-    </div>
-
-    <h2 className="text-3xl font-bold text-green-700">
-      Verification Successful
-    </h2>
-
-    <p className="text-lg mt-3 text-gray-700">
-      Pensioner identity has been verified successfully.
-    </p>
-
-    <div className="mt-6">
-      <button
-        onClick={() => navigate("/verify")}
-        className="bg-blue-700 text-white px-8 py-3 rounded-lg"
-      >
-        Verify Another Pensioner
-      </button>
-    </div>
-
-  </div>
-)}
-          
         </div>
 
       </div>
