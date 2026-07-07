@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import {
   getRenewalPeriods,
   getRenewalReport,
@@ -130,6 +132,12 @@ const Report = () => {
             >
               Generate Report
             </button>
+            <button
+  onClick={exportToExcel}
+  className="bg-green-700 text-white px-5 py-3 rounded"
+>
+  Export Excel
+</button>
 
           </div>
 
