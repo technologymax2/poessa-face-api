@@ -11,7 +11,7 @@ import {
 const RenewalManagement = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [current, setCurrent] = useState(null);
+  const [renewals, setRenewals] = useState([]);
 
   const [form, setForm] = useState({
     title: "",
@@ -20,24 +20,19 @@ const RenewalManagement = () => {
     endDate: "",
   });
 
-  const loadCurrent = async () => {
-    try {
-      const res = await getCurrentRenewal();
+ const loadRenewals = async () => {
+  try {
+    const res = await getRenewals();
 
-      if (res.data.success) {
-        setCurrent(res.data.data);
-      } else {
-        setCurrent(null);
-      }
-    } catch (err) {
-      console.log(err);
-      setCurrent(null);
-    }
-  };
+    setRenewals(res.data.data);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
-  useEffect(() => {
-    loadCurrent();
-  }, []);
+useEffect(() => {
+  loadRenewals();
+}, []);
 
   const handleChange = (e) => {
     setForm({
@@ -134,63 +129,59 @@ const RenewalManagement = () => {
             Renewal Management
           </h2>
 
-          {current && (
-            <div className="mb-8 p-5 rounded-lg bg-blue-50 border">
+        {renewals.map((item) => (
+  <div
+    key={item._id}
+    className="border rounded-lg p-5 mb-5 bg-blue-50"
+  >
+    <h3 className="font-bold text-xl">
+      {item.title}
+    </h3>
 
-              <h3 className="font-bold text-xl mb-3">
-                Current Renewal
-              </h3>
+    <p>{item.message}</p>
 
-              <p>
-                <strong>Title:</strong> {current.title}
-              </p>
+    <p>
+      <strong>Start:</strong>{" "}
+      {new Date(item.startDate).toLocaleString()}
+    </p>
 
-              <p>
-                <strong>Message:</strong> {current.message}
-              </p>
+    <p>
+      <strong>End:</strong>{" "}
+      {new Date(item.endDate).toLocaleString()}
+    </p>
 
-              <p>
-                <strong>Start:</strong>{" "}
-                {new Date(current.startDate).toLocaleString()}
-              </p>
+    <div className="flex gap-3 mt-4">
+      <button
+        className="bg-yellow-500 text-white px-4 py-2 rounded"
+        onClick={() => {
+          setEditing(true);
 
-              <p>
-                <strong>End:</strong>{" "}
-                {new Date(current.endDate).toLocaleString()}
-              </p>
+          setCurrent(item);
 
-              <div className="flex gap-3 mt-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditing(true);
+          setForm({
+            title: item.title,
+            message: item.message,
+            startDate: new Date(item.startDate)
+              .toISOString()
+              .slice(0,16),
+            endDate: new Date(item.endDate)
+              .toISOString()
+              .slice(0,16),
+          });
+        }}
+      >
+        Edit
+      </button>
 
-                    setForm({
-                      title: current.title,
-                      message: current.message,
-                      startDate: new Date(current.startDate)
-                        .toISOString()
-                        .slice(0, 16),
-                      endDate: new Date(current.endDate)
-                        .toISOString()
-                        .slice(0, 16),
-                    });
-                  }}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg"
-                >
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          )}
+      <button
+        className="bg-red-600 text-white px-4 py-2 rounded"
+        onClick={() => handleDelete(item._id)}
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+))}
 
           <form
             onSubmit={handleSubmit}
