@@ -10,7 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import ViewPensioner from "./pages/ViewPensioner";
 import EditPensioner from "./pages/EditPensioner";
 import Liveness from "./pages/Liveness";
-import Renewal from "./pages/Renewal";
+import RenewalManagement from "./pages/RenewalManagement";
 
 // Components
 import PrivateRoute from "./components/PrivateRoute";
@@ -44,7 +44,7 @@ function App() {
 />
 <Route
   path="/renewal"
-  element={<Renewal />}
+  element={<RenewalManagement />}
 />
       
         </Route>
