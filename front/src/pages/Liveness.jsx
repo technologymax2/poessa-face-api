@@ -237,7 +237,7 @@ useEffect(() => {
           </div>
 
 <div className="flex justify-center mt-6">
-  <div className="w-[500px] h-[500px] rounded-full overflow-hidden border-8 border-blue-600 shadow-2xl">
+  <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-500 shadow-xl">
     <Webcam
       ref={webcamRef}
       audio={false}
