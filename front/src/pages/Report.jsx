@@ -72,7 +72,77 @@ const Report = () => {
       setLoading(false);
     }
   };
+const exportToExcel = () => {
 
+  if (!summary) {
+    return alert("Generate report first.");
+  }
+
+  const renewedSheet = renewed.map((p) => ({
+    PensionerID: p.pensionerId,
+    Name: p.nameEng,
+    Branch: p.poessaBranch,
+    Phone: p.phone,
+    Fayda: p.faydaNumber,
+    Status: "Renewed",
+    VerifiedAt: p.verifiedAt
+      ? new Date(p.verifiedAt).toLocaleString()
+      : "",
+  }));
+
+  const notRenewedSheet = notRenewed.map((p) => ({
+    PensionerID: p.pensionerId,
+    Name: p.nameEng,
+    Branch: p.poessaBranch,
+    Phone: p.phone,
+    Fayda: p.faydaNumber,
+    Status: "Not Renewed",
+  }));
+
+  const branchSheet = branchSummary.map((b) => ({
+    Branch: b.branch,
+    Total: b.total,
+    Renewed: b.renewed,
+    NotRenewed: b.notRenewed,
+    Percent: `${b.percent}%`,
+  }));
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(renewedSheet),
+    "Renewed"
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(notRenewedSheet),
+    "Not Renewed"
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(branchSheet),
+    "Branch Summary"
+  );
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  const file = new Blob(
+    [excelBuffer],
+    {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+  );
+
+  saveAs(file, "Renewal_Report.xlsx");
+
+};
   return (
     <>
       <Navbar />
