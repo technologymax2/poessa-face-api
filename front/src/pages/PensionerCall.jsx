@@ -33,8 +33,27 @@ const PensionerCall = () => {
     initMedia();
 
     socket.on("callAccepted", () => {
-      setCallStatus("connected");
-    });
+  setCallStatus("connected");
+
+  const peer = new Peer({
+    initiator: true,
+    trickle: false,
+    stream: streamRef.current,
+    config: {
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    },
+  });
+
+  peer.on("signal", (signal) => {
+    socket.emit("offer", { roomId, offer: signal });
+  });
+
+  peer.on("stream", (stream) => {
+    if (remoteVideo.current) remoteVideo.current.srcObject = stream;
+  });
+
+  peerRef.current = peer;
+});
 
     socket.on("offer", ({ offer }) => {
       peerRef.current?.signal(offer);
@@ -61,7 +80,7 @@ const PensionerCall = () => {
     setCalling(true);
     setCallStatus("searching");
     socket.emit("registerPensioner", {
-    pensionerId: fayda
+    pensionerId: fayda,
 });
 
 socket.emit("joinRoom", {
@@ -74,17 +93,6 @@ socket.emit("joinRoom", {
 
     socket.emit("requestCall", { roomId: room, pensionerId: fayda });
 
-    const peer = new Peer({ initiator: true, trickle: false, stream: streamRef.current });
-    
-    peer.on("signal", (signal) => {
-      socket.emit("offer", { roomId: room, offer: signal });
-    });
-
-    peer.on("stream", (stream) => {
-      if (remoteVideo.current) remoteVideo.current.srcObject = stream;
-    });
-
-    peerRef.current = peer;
   };
 
   const endCall = () => {
