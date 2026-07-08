@@ -4,7 +4,7 @@ import Peer from "simple-peer";
 import io from "socket.io-client";
 
 const API = process.env.REACT_APP_API_URL || "https://poessa-digital-services-1.onrender.com";
-const socket = io(API, { transports: ["websocket"] });
+const socket = io(API, { transports: ["websocket", "polling"] });
 
 const OfficerCallCenter = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -31,24 +31,50 @@ const OfficerCallCenter = () => {
   useEffect(() => {
     initCamera();
     socket.emit("registerOfficer", { officerId: user._id, fullName: user.fullName });
-    
+
     socket.on("queueUpdated", (data) => setQueue(data));
-    socket.on("incoming-call", (data) => {
-      console.log("ጥሪ ደረሰ:", data);
+    
+    // የፔንሽነሩን ጥሪ መቀበል
+    socket.on("incomingCall", (data) => {
       setIncomingCall(data);
       setCallStatus("incoming");
     });
-    
-    return () => { socket.off("queueUpdated"); socket.off("incoming-call"); };
-  }, [initCamera, user._id, user.fullName]);
+
+    socket.on("offer", ({ offer, sender }) => {
+      const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current });
+      
+      peer.on("signal", (signal) => {
+        socket.emit("answer", { roomId: incomingCall.roomId, answer: signal });
+      });
+
+      peer.on("stream", (stream) => {
+        if (remoteVideo.current) remoteVideo.current.srcObject = stream;
+      });
+
+      peer.signal(offer);
+      peerRef.current = peer;
+    });
+
+    socket.on("iceCandidate", ({ candidate }) => {
+      peerRef.current?.signal(candidate);
+    });
+
+    return () => {
+      socket.off("queueUpdated");
+      socket.off("incomingCall");
+      socket.off("offer");
+    };
+  }, [initCamera, user._id, user.fullName, incomingCall?.roomId]);
 
   const acceptCall = () => {
-    const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current });
-    peer.on("signal", (signal) => socket.emit("answer-call", { signal, to: incomingCall.from }));
-    peer.on("stream", (stream) => { if (remoteVideo.current) remoteVideo.current.srcObject = stream; });
-    peer.signal(incomingCall.signal);
-    peerRef.current = peer;
+    socket.emit("acceptCall", { roomId: incomingCall.roomId, officerId: user._id });
     setCallStatus("connected");
+  };
+
+  const endCall = () => {
+    socket.emit("endCall", { roomId: incomingCall?.roomId, officerId: user._id });
+    peerRef.current?.destroy();
+    window.location.reload();
   };
 
   const toggleCamera = () => {
@@ -68,18 +94,21 @@ const OfficerCallCenter = () => {
       {/* ቪዲዮ መደራረብ */}
       <div className="relative w-full h-[400px] bg-black rounded-xl overflow-hidden">
         <video ref={remoteVideo} autoPlay playsInline className="w-full h-full object-cover" />
+        {/* የሰራተኛው ቪዲዮ በጡረተኛው ላይ ተደራቢ */}
         <video ref={myVideo} autoPlay muted playsInline className="absolute bottom-4 left-4 w-32 h-40 bg-gray-700 rounded-lg border-2 border-white object-cover" />
       </div>
 
-      {/* ቁልፎች - ሁሌም እንዲታዩ ተደረጉ */}
+      {/* መቆጣጠሪያዎች */}
       <div className="mt-4 bg-gray-800 p-4 rounded-xl flex flex-wrap gap-2 justify-center">
-        {callStatus === "incoming" && <button onClick={acceptCall} className="bg-green-600 px-8 py-3 rounded-full font-bold">ጥሪ ተቀበል</button>}
+        {callStatus === "incoming" && (
+            <button onClick={acceptCall} className="bg-green-600 px-8 py-3 rounded-full font-bold">ጥሪ ተቀበል</button>
+        )}
         
         <button onClick={toggleCamera} className="bg-blue-600 px-4 py-2 rounded-full">Cam {cameraOn ? "ON" : "OFF"}</button>
         <button onClick={toggleMic} className="bg-blue-600 px-4 py-2 rounded-full">Mic {micOn ? "ON" : "OFF"}</button>
         
         {callStatus === "connected" && (
-           <button onClick={() => window.location.reload()} className="bg-red-600 px-4 py-2 rounded-full font-bold">End Call</button>
+           <button onClick={endCall} className="bg-red-600 px-4 py-2 rounded-full font-bold">End Call</button>
         )}
       </div>
 
@@ -91,7 +120,7 @@ const OfficerCallCenter = () => {
       {/* የጥሪ ዝርዝር */}
       <div className="mt-4">
         <h3 className="font-bold">በመጠባበቅ ላይ ያሉት:</h3>
-        {queue.map((q) => <div key={q._id} className="p-2 border-b border-gray-700">{q.pensioner?.fullName}</div>)}
+        {queue.map((q) => <div key={q.roomId} className="p-2 border-b border-gray-700">{q.pensionerId}</div>)}
       </div>
     </div>
   );
