@@ -20,7 +20,9 @@ const evidenceSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  { _id: false }
+  {
+    _id: false,
+  }
 );
 
 const videoVerificationSchema = new mongoose.Schema(
@@ -52,4 +54,138 @@ const videoVerificationSchema = new mongoose.Schema(
       trim: true,
     },
 
-    
+    // Video Room
+    roomId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    // Call Status
+    callStatus: {
+      type: String,
+      enum: [
+        "WAITING",
+        "RINGING",
+        "CONNECTED",
+        "COMPLETED",
+        "REJECTED",
+        "CANCELLED",
+      ],
+      default: "WAITING",
+    },
+
+    // Start Time
+    startedAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    // Connected Time
+    connectedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // End Time
+    endedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Duration (seconds)
+    duration: {
+      type: Number,
+      default: 0,
+    },
+
+    // Officer Notes
+    notes: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Alive Confirmation
+    aliveConfirmed: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Renewal Completed
+    renewalCompleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Evidence Photos
+    evidences: [evidenceSchema],
+
+    // Call Recording (optional)
+    recording: {
+      type: String,
+      default: "",
+    },
+
+    // Network Quality
+    networkQuality: {
+      type: String,
+      enum: ["Excellent", "Good", "Fair", "Poor"],
+      default: "Good",
+    },
+
+    // Device Used
+    device: {
+      type: String,
+      default: "",
+    },
+
+    // Browser Used
+    browser: {
+      type: String,
+      default: "",
+    },
+
+    // IP Address
+    ipAddress: {
+      type: String,
+      default: "",
+    },
+
+    // GPS Location (Optional)
+    location: {
+      latitude: {
+        type: Number,
+        default: null,
+      },
+
+      longitude: {
+        type: Number,
+        default: null,
+      },
+
+      address: {
+        type: String,
+        default: "",
+      },
+    },
+
+    // Audit Status
+    status: {
+      type: String,
+      enum: [
+        "OPEN",
+        "CLOSED",
+      ],
+      default: "OPEN",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model(
+  "VideoVerification",
+  videoVerificationSchema
+);
