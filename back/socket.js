@@ -4,11 +4,7 @@ const OfficerStatus = require("./models/OfficerStatus");
 
 module.exports = (server) => {
     const io = new Server(server, {
-        cors: {
-            origin: "*",
-            methods: ["GET", "POST"],
-            credentials: true
-        },
+        cors: { origin: "*", methods: ["GET", "POST"], credentials: true },
         transports: ["websocket", "polling"]
     });
 
@@ -33,6 +29,7 @@ module.exports = (server) => {
             await freeOfficer.save();
             const socketId = officerSockets.get(String(freeOfficer.officer));
             if (socketId) {
+                // መፍትሄ፡ 'incomingCall' የሚለው ኢቨንት በOfficerCallCenter ላይ 'incomingCall' ተብሎ መጠበቅ አለበት
                 io.to(socketId).emit("incomingCall", waiting);
             }
         }
@@ -40,7 +37,7 @@ module.exports = (server) => {
         socket.on("registerOfficer", async (data) => {
             const { officerId, name } = data;
             connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
-            officerSockets.set(officerId, socket.id);
+            officerSockets.set(String(officerId), socket.id);
             await OfficerStatus.findOneAndUpdate(
                 { officer: officerId },
                 { online: true, busy: false, lastSeen: new Date() },
@@ -72,18 +69,16 @@ module.exports = (server) => {
                 await call.save();
             }
             const index = waitingQueue.findIndex(q => q.roomId === roomId);
-            if (index !== -1) {
-                waitingQueue.splice(index, 1);
-            }
+            if (index !== -1) waitingQueue.splice(index, 1);
             io.emit("queueUpdated", waitingQueue);
             io.to(roomId).emit("callAccepted");
         });
 
         socket.on("joinRoom", ({ roomId }) => {
             socket.join(roomId);
-            console.log(`${socket.id} joined ${roomId}`);
         });
 
+        // WebRTC Signaling - ቪዲዮው እንዲገናኝ እነዚህ ኢቨንቶች በroomId መላካቸውን እናረጋግጣለን
         socket.on("offer", ({ roomId, offer }) => {
             socket.to(roomId).emit("offer", { offer, sender: socket.id });
         });
@@ -100,37 +95,14 @@ module.exports = (server) => {
             io.to(roomId).emit("chatMessage", { sender, message, createdAt: new Date() });
         });
 
-        socket.on("cameraOn", ({ roomId }) => {
-            socket.to(roomId).emit("cameraOn", { userId: socket.id });
-        });
-
-        socket.on("cameraOff", ({ roomId }) => {
-            socket.to(roomId).emit("cameraOff", { userId: socket.id });
-        });
-
-        socket.on("micOn", ({ roomId }) => {
-            socket.to(roomId).emit("micOn", { userId: socket.id });
-        });
-
-        socket.on("micOff", ({ roomId }) => {
-            socket.to(roomId).emit("micOff", { userId: socket.id });
-        });
-
-        socket.on("captureEvidence", ({ roomId, image }) => {
-            io.to(roomId).emit("evidenceCaptured", { image, capturedBy: socket.id, createdAt: new Date() });
-        });
-
-        socket.on("recordingStarted", ({ roomId }) => {
-            io.to(roomId).emit("recordingStarted");
-        });
-
-        socket.on("recordingStopped", ({ roomId }) => {
-            io.to(roomId).emit("recordingStopped");
-        });
-
-        socket.on("saveNotes", ({ roomId, notes }) => {
-            io.to(roomId).emit("notesUpdated", { notes });
-        });
+        socket.on("cameraOn", ({ roomId }) => { io.to(roomId).emit("cameraOn", { userId: socket.id }); });
+        socket.on("cameraOff", ({ roomId }) => { io.to(roomId).emit("cameraOff", { userId: socket.id }); });
+        socket.on("micOn", ({ roomId }) => { io.to(roomId).emit("micOn", { userId: socket.id }); });
+        socket.on("micOff", ({ roomId }) => { io.to(roomId).emit("micOff", { userId: socket.id }); });
+        socket.on("captureEvidence", ({ roomId, image }) => { io.to(roomId).emit("evidenceCaptured", { image, capturedBy: socket.id, createdAt: new Date() }); });
+        socket.on("recordingStarted", ({ roomId }) => { io.to(roomId).emit("recordingStarted"); });
+        socket.on("recordingStopped", ({ roomId }) => { io.to(roomId).emit("recordingStopped"); });
+        socket.on("saveNotes", ({ roomId, notes }) => { io.to(roomId).emit("notesUpdated", { notes }); });
 
         socket.on("transferCall", async ({ roomId, fromOfficer, toOfficer }) => {
             const targetSocket = officerSockets.get(toOfficer);
@@ -162,17 +134,14 @@ module.exports = (server) => {
                 call.endedAt = new Date();
                 await call.save();
             }
-            await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: false, lastSeen: new Date() });
+            if (officerId) {
+                await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: false, lastSeen: new Date() });
+            }
             assignOfficer();
         });
 
-        socket.on("renewalCompleted", ({ roomId }) => {
-            io.to(roomId).emit("renewalCompleted");
-        });
-
-        socket.on("auditEvent", ({ roomId, action, officer }) => {
-            io.to(roomId).emit("auditEvent", { roomId, action, officer, time: new Date() });
-        });
+        socket.on("renewalCompleted", ({ roomId }) => { io.to(roomId).emit("renewalCompleted"); });
+        socket.on("auditEvent", ({ roomId, action, officer }) => { io.to(roomId).emit("auditEvent", { roomId, action, officer, time: new Date() }); });
 
         socket.on("disconnect", async () => {
             const user = connectedUsers.get(socket.id);
@@ -189,6 +158,5 @@ module.exports = (server) => {
             }
             console.log(`${socket.id} disconnected`);
         });
-
-    }); // end io.on("connection")
-}; // end module.exports
+    });
+};
