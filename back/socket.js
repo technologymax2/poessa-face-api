@@ -31,6 +31,23 @@ module.exports = (server) => {
   // ============================================
 
   const activeRooms = new Map();
+  // ============================================
+// Waiting Queue
+// ============================================
+
+const waitingQueue = [];
+
+// ============================================
+// Available Officers
+// ============================================
+
+const availableOfficers = new Map();
+
+// ============================================
+// Busy Officers
+// ============================================
+
+const busyOfficers = new Map();
 
   io.on("connection", (socket) => {
 
@@ -56,7 +73,108 @@ module.exports = (server) => {
         "onlineUsers",
         Array.from(connectedUsers.keys())
       );
+
+      if (role === "OFFICER") {
+    availableOfficers.set(userId, {
+        socketId: socket.id,
+        busy: false,
+        lastSeen: new Date()
     });
+}
+    });
+    // ========================================
+// Request Video Verification
+// ========================================
+
+socket.on("requestVideoVerification",
+          // ========================================
+// Request Video Verification
+// ========================================
+
+socket.on(
+  "requestVideoVerification",
+  ({
+    roomId,
+    pensionerId,
+    pensionerName,
+    faydaNumber,
+  }) => {
+
+    const queueItem = {
+      roomId,
+      pensionerId,
+      pensionerName,
+      faydaNumber,
+      requestedAt: new Date(),
+      status: "WAITING",
+    };
+
+    waitingQueue.push(queueItem);
+
+    console.log(
+      "Video Verification Requested:",
+      pensionerName
+    );
+
+    io.emit("queueUpdated", waitingQueue);
+
+  }
+);
+    // ========================================
+// Officer Accepts Call
+// ========================================
+
+socket.on(
+  "acceptCall",
+  ({
+    roomId,
+    officerId,
+  }) => {
+
+    const room =
+      waitingQueue.find(
+        r => r.roomId === roomId
+      );
+
+    if (!room) {
+
+      return socket.emit(
+        "roomError",
+        {
+          message:
+            "Room not found."
+        }
+      );
+
+    }
+
+    room.status = "CONNECTED";
+    room.officerId = officerId;
+    room.connectedAt = new Date();
+
+    socket.join(roomId);
+
+    busyOfficers.set(
+      officerId,
+      roomId
+    );
+
+    availableOfficers.delete(
+      officerId
+    );
+
+    io.to(roomId).emit(
+      "callAccepted",
+      room
+    );
+
+    io.emit(
+      "queueUpdated",
+      waitingQueue
+    );
+
+  }
+);
 
     // ========================================
     // Officer Creates Room
@@ -168,7 +286,47 @@ module.exports = (server) => {
       });
 
     });
+// ========================================
+// Officer Rejects Call
+// ========================================
 
+socket.on(
+  "rejectCall",
+  ({
+    roomId,
+    officerId,
+  }) => {
+
+    const index =
+      waitingQueue.findIndex(
+        r => r.roomId === roomId
+      );
+
+    if (index === -1) return;
+
+    waitingQueue[index].status =
+      "REJECTED";
+
+    waitingQueue[index].rejectedBy =
+      officerId;
+
+    waitingQueue[index].rejectedAt =
+      new Date();
+
+    io.to(roomId).emit(
+      "callRejected",
+      {
+        officerId,
+      }
+    );
+
+    io.emit(
+      "queueUpdated",
+      waitingQueue
+    );
+
+  }
+);
     // ========================================
     // ICE Candidate
     // ========================================
@@ -193,7 +351,97 @@ module.exports = (server) => {
       });
 
     });
+// ========================================
+// End Call
+// ========================================
 
+socket.on(
+  "endCall",
+  ({
+    roomId,
+    officerId,
+  }) => {
+
+    const room =
+      waitingQueue.find(
+        r => r.roomId === roomId
+      );
+
+    if (!room) return;
+
+    room.status = "COMPLETED";
+    room.endedAt = new Date();
+
+    if (room.connectedAt) {
+
+      room.duration = Math.floor(
+
+        (room.endedAt -
+          room.connectedAt) / 1000
+
+      );
+
+    }
+
+    busyOfficers.delete(
+      officerId
+    );
+
+    availableOfficers.set(
+      officerId,
+      {
+        socketId: socket.id,
+        busy: false,
+        lastSeen: new Date(),
+      }
+    );
+
+    io.to(roomId).emit(
+      "callEnded",
+      room
+    );
+
+    io.emit(
+      "queueUpdated",
+      waitingQueue
+    );
+
+    console.log(
+      "Call Finished:",
+      roomId
+    );
+
+  }
+);
+    // ========================================
+// Cleanup Queue
+// ========================================
+
+setInterval(() => {
+
+  for (
+    let i = waitingQueue.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    if (
+      waitingQueue[i].status ===
+      "COMPLETED"
+    ) {
+
+      waitingQueue.splice(i, 1);
+
+    }
+
+  }
+
+  io.emit(
+    "queueUpdated",
+    waitingQueue
+  );
+
+}, 300000); // every 5 minutes
     // ========================================
     // Camera Disabled
     // ========================================
@@ -400,4 +648,3 @@ module.exports = (server) => {
   return io;
 
 };
-module.exports = initializeSocket;
