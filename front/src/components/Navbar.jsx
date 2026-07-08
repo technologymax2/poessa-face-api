@@ -62,6 +62,13 @@ const Navbar = () => {
                 <NavLink to="/reports" className={navLinkClass}>
   Reports
 </NavLink>
+
+                <NavLink
+    to="/video-verification"
+    className={navLinkClass}
+>
+    Video Verification
+</NavLink>
                 
               </>
             )}
