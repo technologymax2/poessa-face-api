@@ -2,6 +2,7 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const app = require("./app");
+require("./socket")(server);
 
 const PORT = process.env.PORT || 10000;
 let server; // Store the server instance here
