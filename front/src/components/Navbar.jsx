@@ -68,7 +68,13 @@ const Navbar = () => {
     className={navLinkClass}
 >
     Video Verification
-</NavLink>
+</NavLink
+ <Link
+    to="/patient-video/demo-room"
+    className="hover:text-blue-500"
+  >
+    Video Verification
+  </Link>
                 
               </>
             )}
