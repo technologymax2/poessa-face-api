@@ -11,7 +11,7 @@ import EditPensioner from "./pages/EditPensioner";
 import Liveness from "./pages/Liveness";
 import RenewalManagement from "./pages/RenewalManagement";
 import Report from "./pages/Report";
-import PatientVideoCall from "./pages/PensionerCall";
+import PensionerCall from "./pages/PensionerCall";
 import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
@@ -55,7 +55,7 @@ function App() {
 />
       <Route
   path="/patient-video/:roomId"
-  element={<PatientVideoCall />}
+  element={<PensionerCall />}
 />
         </Route>
 
