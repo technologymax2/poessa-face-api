@@ -1,509 +1,119 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
+import React, { useEffect, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import Loader from "../components/Loader";
-
 import io from "socket.io-client";
-
-import {
-  searchPensioner,
-} from "../services/api";
+import { searchPensioner } from "../services/api";
 
 const socket = io(process.env.REACT_APP_API_URL);
 
 const VideoVerification = () => {
-
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
-
   const peerConnection = useRef(null);
-
   const localStream = useRef(null);
 
   const [loading, setLoading] = useState(false);
-
   const [faydaNumber, setFaydaNumber] = useState("");
-
   const [pensioner, setPensioner] = useState(null);
-
   const [roomId, setRoomId] = useState("");
-
   const [callStarted, setCallStarted] = useState(false);
-
   const [cameraOn, setCameraOn] = useState(true);
-
   const [micOn, setMicOn] = useState(true);
-
   const [callTime, setCallTime] = useState(0);
-
   const [messages, setMessages] = useState([]);
-
   const [message, setMessage] = useState("");
-
-  const [officer] = useState(() => {
-
-    const user = JSON.parse(
-      localStorage.getItem("user")
-    );
-
-    return user;
-
-  });
-
-  useEffect(() => {
-
-    socket.emit("register", {
-      userId: officer._id,
-      role: "OFFICER",
-    });
-
-  }, []);
-
-  useEffect(() => {
-
-    let timer;
-
-    if (callStarted) {
-
-      timer = setInterval(() => {
-
-        setCallTime((prev) => prev + 1);
-
-      }, 1000);
-
-    }
-
-    return () => clearInterval(timer);
-
-  }, [callStarted]);
-
-  const search = async () => {
-
-    if (!faydaNumber) {
-
-      return alert("Enter Fayda Number");
-
-    }
-
-    try {
-
-      setLoading(true);
-
-      const res =
-        await searchPensioner(faydaNumber);
-
-      setPensioner(res.data.data);
-
-    } catch (err) {
-
-      alert(
-        err.response?.data?.message ||
-        "Pensioner not found."
-      );
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  };
-
-  const startCamera = async () => {
-
-    try {
-
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-
-          video: true,
-
-          audio: true,
-
-        });
-
-      localStream.current = stream;
-
-      if (localVideo.current) {
-
-        localVideo.current.srcObject = stream;
-
-      }
-
-    } catch (err) {
-
-      console.log(err);
-
-      alert("Camera permission denied.");
-
-    }
-
-  };
-
-  useEffect(() => {
-
-    startCamera();
-
-  }, []);
-    // ==========================================
-  // WebRTC Configuration
-  // ==========================================
+  
+  const officer = JSON.parse(localStorage.getItem("user"));
 
   const configuration = {
-    iceServers: [
-      {
-        urls: "stun:stun.l.google.com:19302",
-      },
-    ],
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
   };
-
-  // ==========================================
-  // Create Room
-  // ==========================================
-
-  const createRoom = async () => {
-
-    if (!pensioner) {
-      return alert("Search pensioner first.");
-    }
-
-    const room =
-      "ROOM-" +
-      Date.now() +
-      "-" +
-      Math.floor(Math.random() * 1000);
-
-    setRoomId(room);
-
-    socket.emit("createRoom", {
-      roomId: room,
-      officerId: officer._id,
-    });
-
-    createPeer(room);
-  };
-
-  // ==========================================
-  // Create Peer Connection
-  // ==========================================
-
-  const createPeer = async (room) => {
-
-    peerConnection.current =
-      new RTCPeerConnection(configuration);
-
-    // Local Tracks
-    localStream.current
-      .getTracks()
-      .forEach((track) => {
-
-        peerConnection.current.addTrack(
-          track,
-          localStream.current
-        );
-
-      });
-
-    // ICE Candidate
-    peerConnection.current.onicecandidate = (event) => {
-
-      if (event.candidate) {
-
-        socket.emit("iceCandidate", {
-          roomId: room,
-          candidate: event.candidate,
-        });
-
-      }
-
-    };
-
-    // Remote Stream
-    peerConnection.current.ontrack = (event) => {
-
-      if (remoteVideo.current) {
-
-        remoteVideo.current.srcObject =
-          event.streams[0];
-
-      }
-
-    };
-
-    // Create Offer
-    const offer =
-      await peerConnection.current.createOffer();
-
-    await peerConnection.current.setLocalDescription(
-      offer
-    );
-
-    socket.emit("offer", {
-      roomId: room,
-      offer,
-    });
-
-    setCallStarted(true);
-
-  };
-
-  // ==========================================
-  // Socket Listeners
-  // ==========================================
 
   useEffect(() => {
+    socket.emit("register", { userId: officer._id, role: "OFFICER" });
+    startCamera();
+    return () => {
+      if (localStream.current) localStream.current.getTracks().forEach(track => track.stop());
+    };
+  }, []);
 
-    // Receive Offer
-    socket.on("offer", async ({ offer }) => {
+  useEffect(() => {
+    let timer;
+    if (callStarted) timer = setInterval(() => setCallTime((prev) => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, [callStarted]);
 
-      peerConnection.current =
-        new RTCPeerConnection(configuration);
+  // Socket Listeners
+  useEffect(() => {
+    socket.on("offer", async ({ offer, sender }) => {
+      peerConnection.current = new RTCPeerConnection(configuration);
+      localStream.current.getTracks().forEach(track => peerConnection.current.addTrack(track, localStream.current));
+      
+      peerConnection.current.ontrack = (event) => { remoteVideo.current.srcObject = event.streams[0]; };
+      peerConnection.current.onicecandidate = (e) => { if (e.candidate) socket.emit("iceCandidate", { roomId, candidate: e.candidate }); };
 
-      localStream.current
-        .getTracks()
-        .forEach((track) => {
-
-          peerConnection.current.addTrack(
-            track,
-            localStream.current
-          );
-
-        });
-
-      peerConnection.current.ontrack = (event) => {
-
-        if (remoteVideo.current) {
-
-          remoteVideo.current.srcObject =
-            event.streams[0];
-
-        }
-
-      };
-
-      peerConnection.current.onicecandidate =
-        (event) => {
-
-          if (event.candidate) {
-
-            socket.emit("iceCandidate", {
-              roomId,
-              candidate: event.candidate,
-            });
-
-          }
-
-        };
-
-      await peerConnection.current.setRemoteDescription(
-        new RTCSessionDescription(offer)
-      );
-
-      const answer =
-        await peerConnection.current.createAnswer();
-
-      await peerConnection.current.setLocalDescription(
-        answer
-      );
-
-      socket.emit("answer", {
-        roomId,
-        answer,
-      });
-
+      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.current.createAnswer();
+      await peerConnection.current.setLocalDescription(answer);
+      socket.emit("answer", { roomId, answer });
     });
 
-    // Receive Answer
     socket.on("answer", async ({ answer }) => {
-
-      if (!peerConnection.current) return;
-
-      await peerConnection.current.setRemoteDescription(
-        new RTCSessionDescription(answer)
-      );
-
+      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
     });
 
-    // ICE Candidate
-    socket.on(
-      "iceCandidate",
-      async ({ candidate }) => {
+    socket.on("iceCandidate", async ({ candidate }) => {
+      if (peerConnection.current) await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+    });
 
-        if (
-          peerConnection.current &&
-          candidate
-        ) {
-
-          await peerConnection.current.addIceCandidate(
-            new RTCIceCandidate(candidate)
-          );
-
-        }
-
-      }
-    );
+    socket.on("chatMessage", (data) => setMessages((prev) => [...prev, data]));
 
     return () => {
-
       socket.off("offer");
       socket.off("answer");
       socket.off("iceCandidate");
-
+      socket.off("chatMessage");
     };
-
   }, [roomId]);
 
-  // ==========================================
-  // Camera Toggle
-  // ==========================================
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStream.current = stream;
+      if (localVideo.current) localVideo.current.srcObject = stream;
+    } catch (err) { alert("Camera/Mic access denied."); }
+  };
+
+  const createRoom = async () => {
+    if (!pensioner) return alert("Search pensioner first.");
+    const room = `ROOM-${Date.now()}`;
+    setRoomId(room);
+    socket.emit("createRoom", { roomId: room, officerId: officer._id });
+    setCallStarted(true);
+  };
 
   const toggleCamera = () => {
-
     const enabled = !cameraOn;
-
-    localStream.current
-      .getVideoTracks()
-      .forEach((track) => {
-
-        track.enabled = enabled;
-
-      });
-
+    localStream.current.getVideoTracks().forEach(t => t.enabled = enabled);
     setCameraOn(enabled);
-
-    socket.emit(
-      enabled ? "cameraOn" : "cameraOff",
-      { roomId }
-    );
-
+    socket.emit(enabled ? "cameraOn" : "cameraOff", { roomId });
   };
-
-  // ==========================================
-  // Microphone Toggle
-  // ==========================================
 
   const toggleMic = () => {
-
     const enabled = !micOn;
-
-    localStream.current
-      .getAudioTracks()
-      .forEach((track) => {
-
-        track.enabled = enabled;
-
-      });
-
+    localStream.current.getAudioTracks().forEach(t => t.enabled = enabled);
     setMicOn(enabled);
-
-    socket.emit(
-      enabled ? "micOn" : "micOff",
-      { roomId }
-    );
-
+    socket.emit(enabled ? "micOn" : "micOff", { roomId });
   };
-    // ==========================================
-  // Capture Evidence
-  // ==========================================
-
-  const captureEvidence = () => {
-
-    const canvas = document.createElement("canvas");
-
-    canvas.width = localVideo.current.videoWidth;
-    canvas.height = localVideo.current.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-
-    ctx.drawImage(
-      localVideo.current,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-
-    const image = canvas.toDataURL("image/jpeg");
-
-    socket.emit("captureEvidence", {
-      roomId,
-      image,
-    });
-
-    alert("Evidence captured successfully.");
-
-  };
-
-  // ==========================================
-  // Send Chat Message
-  // ==========================================
-
-  const sendMessage = () => {
-
-    if (!message.trim()) return;
-
-    socket.emit("chatMessage", {
-      roomId,
-      sender: officer.fullName,
-      message,
-    });
-
-    setMessage("");
-
-  };
-
-  useEffect(() => {
-
-    socket.on("chatMessage", (data) => {
-
-      setMessages((prev) => [...prev, data]);
-
-    });
-
-    return () => {
-
-      socket.off("chatMessage");
-
-    };
-
-  }, []);
-
-  // ==========================================
-  // End Call
-  // ==========================================
 
   const endCall = () => {
-
-    if (peerConnection.current) {
-
-      peerConnection.current.close();
-
-    }
-
-    if (localStream.current) {
-
-      localStream.current.getTracks().forEach(track => track.stop());
-
-    }
-
-    socket.emit("leaveRoom", {
-      roomId,
-    });
-
+    if (peerConnection.current) peerConnection.current.close();
+    socket.emit("endCall", { roomId, officerId: officer._id });
     setCallStarted(false);
-
-    alert("Video verification completed.");
-
+    alert("Verification session ended.");
   };
 
-  // ==========================================
-  // JSX
-  // ==========================================
-
+  
   return (
     <>
       <Navbar />
