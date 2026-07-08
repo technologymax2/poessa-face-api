@@ -1,696 +1,735 @@
-const [queue,setQueue]=useState([]);
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 
-const [selectedCall,setSelectedCall]=useState(null);
+import axios from "axios";
+import Peer from "simple-peer";
+import io from "socket.io-client";
 
-const [pensioner,setPensioner]=useState(null);
+const API =
+  process.env.REACT_APP_API_URL ||
+  "http://localhost:10000";
 
-const [messages,setMessages]=useState([]);
-
-const [notes,setNotes]=useState("");
-
-const [callTime,setCallTime]=useState(0);
-
-const [busy,setBusy]=useState(false);
-
-const [cameraOn,setCameraOn]=useState(true);
-
-const [micOn,setMicOn]=useState(true);
-
-const [recording,setRecording]=useState(false);
-
-const [officers,setOfficers]=useState([]);
-const socket=io(API,{
- transports:["websocket"]
-});
-useEffect(()=>{
-
-socket.emit("registerOfficer",{
-
-officerId:user._id,
-
-name:user.fullName
-
+const socket = io(API, {
+  transports: ["websocket"],
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
 });
 
-},[]);
-useEffect(()=>{
+const OfficerCallCenter = () => {
 
-socket.on("queueUpdated",(data)=>{
+  const user =
+    JSON.parse(localStorage.getItem("user")) || {};
 
-setQueue(data);
+  /* ------------------------- */
+  /* Video References          */
+  /* ------------------------- */
 
-});
+  const myVideo = useRef(null);
+  const remoteVideo = useRef(null);
 
-return()=>{
+  const peerRef = useRef(null);
+  const streamRef = useRef(null);
 
-socket.off("queueUpdated");
+  /* ------------------------- */
+  /* States                    */
+  /* ------------------------- */
 
-}
+  const [queue, setQueue] = useState([]);
 
-},[]);
-useEffect(()=>{
+  const [selectedCall, setSelectedCall] =
+    useState(null);
 
-socket.on("incomingCall",(call)=>{
+  const [incomingCall, setIncomingCall] =
+    useState(null);
 
-setSelectedCall(call);
+  const [pensioner, setPensioner] =
+    useState(null);
 
-});
+  const [messages, setMessages] =
+    useState([]);
 
-return()=>{
+  const [message, setMessage] =
+    useState("");
 
-socket.off("incomingCall");
+  const [notes, setNotes] =
+    useState("");
 
-}
+  const [callStarted, setCallStarted] =
+    useState(false);
 
-},[]);
-const acceptCall=()=>{
+  const [callTime, setCallTime] =
+    useState(0);
 
-socket.emit("acceptCall",{
+  const [cameraOn, setCameraOn] =
+    useState(true);
 
-roomId:selectedCall.roomId,
+  const [micOn, setMicOn] =
+    useState(true);
 
-officerId:user._id
+  const [busy, setBusy] =
+    useState(false);
 
-});
+  const [recording, setRecording] =
+    useState(false);
 
-setBusy(true);
+  const [loading, setLoading] =
+    useState(false);
 
-};
-const rejectCall=()=>{
+  const [officers, setOfficers] =
+    useState([]);
 
-socket.emit("rejectCall",{
+  const [evidences, setEvidences] =
+    useState([]);
 
-roomId:selectedCall.roomId,
+  const [audit, setAudit] =
+    useState([]);
 
-officerId:user._id
+  /* ------------------------- */
+  /* Initialize Camera         */
+  /* ------------------------- */
 
-});
+  const initCamera = useCallback(async () => {
 
-setSelectedCall(null);
+    try {
 
-};
-<div className="w-80 bg-white rounded-xl shadow">
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
 
-<div className="p-4 border-b">
+          video: {
+            width: 1280,
+            height: 720,
+            facingMode: "user",
+          },
 
-<h2 className="font-bold">
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
 
-Waiting Queue
+        });
 
-</h2>
+      streamRef.current = stream;
 
-</div>
+      if (myVideo.current) {
+        myVideo.current.srcObject = stream;
+      }
 
-<div>
+    } catch (err) {
 
-{
+      console.log(err);
 
-queue.map(call=>(
+      alert("Camera permission denied.");
 
-<div
+    }
 
-key={call.roomId}
+  }, []);
 
-className="border-b p-3 hover:bg-gray-100 cursor-pointer"
+  /* ------------------------- */
+  /* Register Officer          */
+  /* ------------------------- */
 
-onClick={()=>setSelectedCall(call)}
+  useEffect(() => {
 
->
+    initCamera();
 
-<p>
+    socket.emit("registerOfficer", {
 
-{call.pensionerName}
+      officerId: user._id,
 
-</p>
+      fullName: user.fullName,
 
-<p>
+    });
 
-{call.faydaNumber}
+  }, [initCamera]);
 
-</p>
+  /* ------------------------- */
+  /* Socket Connected          */
+  /* ------------------------- */
 
-</div>
+  useEffect(() => {
 
-))
+    socket.on("connect", () => {
 
-}
+      console.log("Connected :", socket.id);
 
-</div>
+    });
 
-</div>
-<div className="relative">
+    return () => {
 
-<video
+      socket.off("connect");
 
-ref={remoteVideo}
+    };
 
-autoPlay
+  }, []);
 
-playsInline
+  /* ------------------------- */
+  /* Waiting Queue             */
+  /* ------------------------- */
 
-className="w-full rounded-xl bg-black"
+  useEffect(() => {
 
-/>
+    socket.on("queueUpdated", (calls) => {
 
-<video
+      setQueue(calls);
 
-ref={myVideo}
+    });
 
-autoPlay
+    return () => {
 
-muted
+      socket.off("queueUpdated");
 
-playsInline
+    };
 
-className="absolute
+  }, []);
 
-bottom-4
+  /* ------------------------- */
+  /* Incoming Call             */
+  /* ------------------------- */
 
-right-4
+  useEffect(() => {
 
-w-48
+    socket.on("incomingCall", (call) => {
 
-rounded-lg
+      setIncomingCall(call);
 
-border-4
+      setSelectedCall(call);
 
-border-white"
+    });
 
-/>
+    return () => {
 
-</div>
-  <div className="bg-white rounded-xl p-5">
+      socket.off("incomingCall");
 
-<h2>
+    };
 
-Pensioner Information
+  }, []);
 
-</h2>
+  /* ------------------------- */
+  /* Officers Status           */
+  /* ------------------------- */
 
-<p>
+  useEffect(() => {
 
-Name :
+    socket.on("officersUpdated", (list) => {
 
-{pensioner?.nameEng}
+      setOfficers(list);
 
-</p>
+    });
 
-<p>
+    return () => {
 
-Fayda :
+      socket.off("officersUpdated");
 
-{pensioner?.faydaNumber}
+    };
 
-</p>
+  }, []);
 
-<p>
+  /* ------------------------- */
+  /* Timer                     */
+  /* ------------------------- */
 
-Phone :
+  useEffect(() => {
 
-{pensioner?.phone}
+    let timer;
 
-</p>
+    if (callStarted) {
 
-<p>
+      timer = setInterval(() => {
 
-Branch :
+        setCallTime((prev) => prev + 1);
 
-{pensioner?.poessaBranch}
+      }, 1000);
 
-</p>
+    }
 
-<p>
+    return () => clearInterval(timer);
 
-Status :
+  }, [callStarted]);
 
-{
+  /* ------------------------- */
+  /* Accept Call               */
+  /* ------------------------- */
 
-pensioner?.verified ?
+  const acceptCall = () => {
 
-"Verified"
+    if (!selectedCall) return;
 
-:
+    socket.emit("acceptCall", {
 
-"Waiting"
+      roomId: selectedCall.roomId,
 
-}
+      officerId: user._id,
 
-</p>
+    });
 
-</div>
-  <div className="bg-white rounded-xl shadow p-4">
+    setBusy(true);
 
-    <h2 className="font-bold text-lg mb-3">
-        Live Chat
-    </h2>
+    setCallStarted(true);
 
-    <div className="border rounded h-56 overflow-y-auto p-3">
+  };
 
-        {messages.map((msg,index)=>(
-            <div
-                key={index}
-                className={`mb-2 ${
-                    msg.sender===user.fullName
-                        ?"text-right"
-                        :"text-left"
-                }`}
-            >
-                <div className="font-semibold">
-                    {msg.sender}
-                </div>
+  /* ------------------------- */
+  /* Reject Call               */
+  /* ------------------------- */
 
-                <div className="inline-block bg-blue-100 rounded-lg px-3 py-2">
-                    {msg.message}
-                </div>
-            </div>
-        ))}
+  const rejectCall = () => {
 
-    </div>
+    if (!selectedCall) return;
 
-    <div className="flex mt-3">
+    socket.emit("rejectCall", {
 
-        <input
-            className="flex-1 border rounded-l-lg p-2"
-            value={message}
-            onChange={(e)=>setMessage(e.target.value)}
-            placeholder="Type message..."
-        />
+      roomId: selectedCall.roomId,
 
-        <button
-            onClick={sendMessage}
-            className="bg-blue-700 text-white px-5 rounded-r-lg"
-        >
-            Send
-        </button>
+      officerId: user._id,
 
-    </div>
+    });
 
-</div>
-  const captureScreenshot=()=>{
+    setSelectedCall(null);
 
-const canvas=document.createElement("canvas");
+    setIncomingCall(null);
 
-canvas.width=remoteVideo.current.videoWidth;
+  };
 
-canvas.height=remoteVideo.current.videoHeight;
+  /* ------------------------- */
+  /* Camera                    */
+  /* ------------------------- */
 
-const ctx=canvas.getContext("2d");
+  const toggleCamera = () => {
 
-ctx.drawImage(
+    const track =
+      streamRef.current?.getVideoTracks()[0];
 
-remoteVideo.current,
+    if (!track) return;
 
-0,
+    track.enabled = !track.enabled;
 
-0,
+    setCameraOn(track.enabled);
 
-canvas.width,
+    socket.emit(track.enabled ? "cameraOn" : "cameraOff", {
 
-canvas.height
+      roomId: selectedCall?.roomId,
 
-);
+    });
 
-const image=canvas.toDataURL("image/jpeg");
+  };
 
-socket.emit("captureEvidence",{
+  /* ------------------------- */
+  /* Microphone                */
+  /* ------------------------- */
 
-roomId:selectedCall.roomId,
+  const toggleMic = () => {
 
-image
+    const track =
+      streamRef.current?.getAudioTracks()[0];
 
-});
+    if (!track) return;
 
-};
-  const saveScreenshot=async(image)=>{
+    track.enabled = !track.enabled;
 
-await axios.post(
+    setMicOn(track.enabled);
 
-`${API}/api/video/save-evidence`,
+    socket.emit(track.enabled ? "micOn" : "micOff", {
 
-{
+      roomId: selectedCall?.roomId,
 
-roomId:selectedCall.roomId,
+    });
 
-image,
+  };
+ // ===============================
+// OfficerCallCenter.jsx - Part 2
+// ===============================
 
-officerId:user._id
 
-}
+  // Receive incoming call from pensioner
+  useEffect(() => {
+    if (!socket) return;
 
-);
+    socket.on("incoming-call", ({ signal, from }) => {
+      console.log("Incoming call from:", from);
 
-};
-  <div className="bg-white rounded-xl shadow p-4">
+      setIncomingCall({
+        signal,
+        from,
+      });
 
-<h2 className="font-bold mb-3">
+      setCallStatus("incoming");
+    });
 
-Officer Notes
 
-</h2>
+    socket.on("call-ended", () => {
+      endCall();
+    });
 
-<textarea
 
-className="border w-full h-40 rounded-lg p-3"
+    return () => {
+      socket.off("incoming-call");
+      socket.off("call-ended");
+    };
 
-value={notes}
+  }, []);
 
-onChange={(e)=>setNotes(e.target.value)}
 
-/>
 
-<button
+  // Accept incoming call
+  const acceptCall = () => {
 
-onClick={saveNotes}
+    if (!incomingCall) return;
 
-className="mt-3 bg-green-700 text-white px-5 py-2 rounded"
 
->
+    navigator.mediaDevices
+      .getUserMedia({
+        video: true,
+        audio: true,
+      })
+      .then((stream) => {
 
-Save Notes
+        setMyStream(stream);
 
-</button>
 
-</div>
-  const saveNotes=()=>{
+        const peer = new Peer({
+          initiator: false,
+          trickle: false,
+          stream,
+        });
 
-socket.emit("saveNotes",{
 
-roomId:selectedCall.roomId,
+        peer.on("signal", (signal) => {
 
-notes
+          socket.emit("answer-call", {
+            signal,
+            to: incomingCall.from,
+          });
 
-});
+        });
 
-};
-  <div className="flex items-center gap-2">
 
-<div
+        peer.on("stream", (remoteStream) => {
 
-className={`w-3 h-3 rounded-full ${
-recording
-?"bg-red-600 animate-pulse"
-:"bg-gray-400"
-}`}
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+          }
 
-/>
+        });
 
-<span>
 
-{
+        peer.signal(incomingCall.signal);
 
-recording
 
-?
+        peerRef.current = peer;
 
-"Recording..."
 
-:
+        if (myVideoRef.current) {
+          myVideoRef.current.srcObject = stream;
+        }
 
-"Not Recording"
 
-}
+        setCallStatus("connected");
+        setIncomingCall(null);
 
-</span>
+      });
 
-</div>
-  <div className="text-lg font-bold">
+  };
 
-⏱
 
-{
 
-Math.floor(callTime/60)
 
-}
+  // Reject call
+  const rejectCall = () => {
 
-:
+    if (!incomingCall) return;
 
-{
 
-String(callTime%60)
+    socket.emit("reject-call", {
+      to: incomingCall.from,
+    });
 
-.padStart(2,"0")
 
-}
+    setIncomingCall(null);
+    setCallStatus("idle");
 
-</div>
+  };
+
+
+
+
+  // Start call to pensioner
+  const callPensioner = (pensionerId) => {
+
+
+    navigator.mediaDevices
+      .getUserMedia({
+        video:true,
+        audio:true,
+      })
+      .then((stream)=>{
+
+
+        setMyStream(stream);
+
+
+        const peer = new Peer({
+          initiator:true,
+          trickle:false,
+          stream,
+        });
+
+
+
+        peer.on("signal",(signal)=>{
+
+
+          socket.emit("call-user",{
+
+            pensionerId,
+            signal,
+
+          });
+
+
+        });
+
+
+
+        peer.on("stream",(remoteStream)=>{
+
+
+          if(remoteVideoRef.current){
+
+            remoteVideoRef.current.srcObject =
+              remoteStream;
+
+          }
+
+        });
+
+
+
+        peerRef.current = peer;
+
+
+
+        if(myVideoRef.current){
+
+          myVideoRef.current.srcObject =
+            stream;
+
+        }
+
+
+
+        setCallStatus("calling");
+
+
+      });
+
+
+  };
+
+
+
+
+
+  // Receive answer from pensioner
   useEffect(()=>{
 
-let timer;
 
-if(callStarted){
+    socket.on("call-accepted",({signal})=>{
 
-timer=setInterval(()=>{
 
-setCallTime(prev=>prev+1);
+      if(peerRef.current){
 
-},1000);
+        peerRef.current.signal(signal);
+
+        setCallStatus("connected");
+
+      }
+
+
+    });
+
+
+
+    return()=>{
+
+      socket.off("call-accepted");
+
+    }
+
+
+  },[]);
+
+
+
+
+
+
+  // End call
+  const endCall = ()=>{
+
+
+    if(peerRef.current){
+
+      peerRef.current.destroy();
+
+      peerRef.current=null;
+
+    }
+
+
+
+    if(myStream){
+
+
+      myStream.getTracks().forEach(
+        track=>track.stop()
+      );
+
+
+    }
+
+
+
+    if(myVideoRef.current){
+
+      myVideoRef.current.srcObject=null;
+
+    }
+
+
+    if(remoteVideoRef.current){
+
+      remoteVideoRef.current.srcObject=null;
+
+    }
+
+
+
+    setMyStream(null);
+
+    setIncomingCall(null);
+
+    setCallStatus("idle");
+
+
+    socket.emit("end-call");
+
+  };
+
+
+
+
+
+
+  return (
+
+    <div className="officer-call-center">
+
+
+      <h2>
+        Officer Video Call Center
+      </h2>
+
+
+
+      {
+        callStatus==="incoming" && (
+
+          <div className="incoming-call-box">
+
+            <h3>
+              Incoming Pensioner Call
+            </h3>
+
+
+            <button
+              onClick={acceptCall}
+            >
+              Accept
+            </button>
+
+
+            <button
+              onClick={rejectCall}
+            >
+              Reject
+            </button>
+
+
+          </div>
+
+        )
+      }
+
+
+
+
+      <div className="video-container">
+
+
+        <video
+
+          ref={myVideoRef}
+
+          autoPlay
+
+          muted
+
+          playsInline
+
+          className="my-video"
+
+        />
+
+
+
+        <video
+
+          ref={remoteVideoRef}
+
+          autoPlay
+
+          playsInline
+
+          className="remote-video"
+
+        />
+
+
+      </div>
+
+
+
+
+
+      {
+        callStatus==="connected" && (
+
+          <button
+
+            className="end-call-btn"
+
+            onClick={endCall}
+
+          >
+
+            End Call
+
+          </button>
+
+        )
+      }
+
+
+
+    </div>
+
+  );
 
 }
 
-return()=>clearInterval(timer);
-
-},[callStarted]);
-  <div className="grid grid-cols-4 gap-3">
-
-<button
-
-onClick={toggleCamera}
-
-className="bg-indigo-700 text-white p-3 rounded"
-
->
-
-{
-
-cameraOn
-
-?
-
-"Camera Off"
-
-:
-
-"Camera On"
-
-}
-
-</button>
-
-<button
-
-onClick={toggleMic}
-
-className="bg-yellow-600 text-white p-3 rounded"
-
->
-
-{
-
-micOn
-
-?
-
-"Mute"
-
-:
-
-"Unmute"
-
-}
-
-</button>
-
-<button
-
-onClick={captureScreenshot}
-
-className="bg-purple-700 text-white p-3 rounded"
-
->
-
-Screenshot
-
-</button>
-
-<button
-
-onClick={endCall}
-
-className="bg-red-700 text-white p-3 rounded"
-
->
-
-End Call
-
-</button>
-
-</div>
-  <button
-
-onClick={approveRenewal}
-
-className="bg-green-700 text-white w-full mt-5 py-3 rounded-lg"
-
->
-
-Approve Renewal
-
-</button>
-  const approveRenewal=async()=>{
-
-await axios.post(
-
-`${API}/api/video/approve-renewal`,
-
-{
-
-callId:selectedCall._id,
-
-officerId:user._id,
-
-notes
-
-}
-
-);
-
-alert("Renewal Approved");
-
-};
-  <select
-
-className="border rounded-lg p-2"
-
-onChange={(e)=>transferCall(e.target.value)}
-
->
-
-<option>
-
-Transfer Call
-
-</option>
-
-{
-
-officers
-
-.filter(o=>!o.busy)
-
-.map(o=>(
-
-<option
-
-key={o._id}
-
-value={o._id}
-
->
-
-{o.fullName}
-
-</option>
-
-))
-
-}
-
-</select>
-  const transferCall=(officerId)=>{
-
-socket.emit("transferCall",{
-
-roomId:selectedCall.roomId,
-
-fromOfficer:user._id,
-
-toOfficer:officerId
-
-});
-
-};
-  <div className="bg-white rounded-xl shadow p-4">
-
-<h2 className="font-bold">
-
-Evidence
-
-</h2>
-
-<div className="grid grid-cols-3 gap-2">
-
-{
-
-evidences.map(img=>(
-
-<img
-
-key={img._id}
-
-src={img.image}
-
-alt="Evidence"
-
-className="rounded-lg"
-
-/>
-
-))
-
-}
-
-</div>
-
-</div>
-  <div className="bg-white rounded-xl shadow p-4">
-
-<h2 className="font-bold mb-3">
-
-Audit Trail
-
-</h2>
-
-{
-
-audit.map(item=>(
-
-<div
-
-key={item._id}
-
-className="border-l-4 border-blue-600 pl-3 mb-3"
-
->
-
-<p className="font-semibold">
-
-{item.action}
-
-</p>
-
-<p>
-
-{item.officerName}
-
-</p>
-
-<small>
-
-{
-
-new Date(item.createdAt)
-
-.toLocaleString()
-
-}
-
-</small>
-
-</div>
-
-))
-
-}
-
-</div>
+export default OfficerCallCenter;
