@@ -1,440 +1,94 @@
-// controllers/videoVerificationController.js
-
 const { v4: uuidv4 } = require("uuid");
-
 const Pensioner = require("../models/Pensioner");
 const Renewal = require("../models/Renewal");
 const VideoVerification = require("../models/VideoVerification");
 
-// ===============================================
-// Search Pensioner
-// POST /api/video/search
-// ===============================================
-
+// 1. Search Pensioner
 exports.searchPensioner = async (req, res) => {
   try {
-    const { pensionerId, faydaNumber } = req.body;
-
-    if (!pensionerId && !faydaNumber) {
-      return res.status(400).json({
-        success: false,
-        message: "Pensioner ID or Fayda Number is required.",
-      });
-    }
-
+    const { query } = req.query; // ራውቱ ላይ እንደተገለጸው
     const pensioner = await Pensioner.findOne({
-      $or: [
-        { pensionerId },
-        { faydaNumber }
-      ],
+      $or: [{ pensionerId: query }, { faydaNumber: query }],
     });
-
-    if (!pensioner) {
-      return res.status(404).json({
-        success: false,
-        message: "Pensioner not found.",
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: pensioner,
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-
-  }
+    if (!pensioner) return res.status(404).json({ success: false, message: "Not found" });
+    res.json({ success: true, data: pensioner });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-
-// ===============================================
-// Start Video Verification
-// POST /api/video/start
-// ===============================================
-
-exports.startVideoVerification = async (req, res) => {
+// 2. Create Call Session
+exports.createCallSession = async (req, res) => {
   try {
-
     const { pensionerId } = req.body;
-
-    if (!pensionerId) {
-      return res.status(400).json({
-        success: false,
-        message: "Pensioner ID is required.",
-      });
-    }
-
-    const pensioner = await Pensioner.findById(pensionerId);
-
-    if (!pensioner) {
-      return res.status(404).json({
-        success: false,
-        message: "Pensioner not found.",
-      });
-    }
-
-    // Current Renewal
-    const renewal = await Renewal.findOne({
-      active: true,
-    });
-
-    if (!renewal) {
-      return res.status(400).json({
-        success: false,
-        message: "No active renewal period.",
-      });
-    }
-
-    // Already renewed
-    if (
-      pensioner.lastRenewalId &&
-      pensioner.lastRenewalId.toString() ===
-        renewal._id.toString()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "This pensioner has already completed renewal.",
-      });
-    }
-
-    // Generate Room ID
     const roomId = uuidv4();
-
-    const verification =
-      await VideoVerification.create({
-
-        pensioner: pensioner._id,
-
-        renewal: renewal._id,
-
-        officer: req.user.id,
-
-        officerName:
-          req.user.firstName +
-          " " +
-          req.user.lastName,
-
-        roomId,
-
-        callStatus: "WAITING",
-
-        startedAt: new Date(),
-
-      });
-
-    return res.status(201).json({
-
-      success: true,
-
-      message: "Video session created.",
-
-      data: verification,
-
+    const verification = await VideoVerification.create({
+      pensioner: pensionerId,
+      officer: req.user.id,
+      roomId,
+      callStatus: "WAITING",
+      startedAt: new Date(),
     });
-
-  } catch (error) {
-
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-
-  }
+    res.status(201).json({ success: true, data: verification });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-// =========================================
-// Start Video Call
-// =========================================
-exports.startCall = async (req, res) => {
+
+// 3. Join Call
+exports.joinCall = async (req, res) => {
   try {
-
-    const { sessionId } = req.params;
-
-    const session = await VideoVerification.findById(sessionId);
-
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found."
-      });
-    }
-
-    session.callStartedAt = new Date();
-    session.status = "IN_PROGRESS";
-
+    const session = await VideoVerification.findById(req.params.id);
+    if (!session) return res.status(404).json({ success: false, message: "Session not found" });
+    session.callStatus = "IN_PROGRESS";
     await session.save();
-
-    res.json({
-      success: true,
-      message: "Video call started.",
-      data: session
-    });
-
-  } catch (err) {
-
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-
-  }
+    res.json({ success: true, data: session });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// =========================================
-// Capture Evidence
-// =========================================
-exports.captureEvidence = async (req, res) => {
-
-  try {
-
-    const { sessionId } = req.params;
-
-    const session = await VideoVerification.findById(sessionId);
-
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found."
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Evidence image is required."
-      });
-    }
-
-    session.evidenceImages.push(
-      "/uploads/evidence/" + req.file.filename
-    );
-
-    await session.save();
-
-    res.json({
-      success: true,
-      message: "Evidence captured successfully.",
-      data: session
-    });
-
-  } catch (err) {
-
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-
-  }
-
-};
-
-// =========================================
-// End Video Call
-// =========================================
+// 4. End Call
 exports.endCall = async (req, res) => {
-
   try {
-
-    const { sessionId } = req.params;
-    const { remarks } = req.body;
-
-    const session = await VideoVerification
-      .findById(sessionId)
-      .populate("pensioner");
-
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found."
-      });
-    }
-
-    session.callEndedAt = new Date();
-
-    session.duration =
-      Math.floor(
-        (session.callEndedAt - session.callStartedAt) / 1000
-      );
-
-    session.remarks = remarks;
-
-    session.status = "COMPLETED";
-
+    const session = await VideoVerification.findById(req.params.id);
+    if (!session) return res.status(404).json({ success: false, message: "Session not found" });
+    session.callStatus = "COMPLETED";
+    session.endedAt = new Date();
     await session.save();
-
-    session.pensioner.verified = true;
-    session.pensioner.verifiedAt = new Date();
-
-    await session.pensioner.save();
-
-    res.json({
-      success: true,
-      message: "Video verification completed successfully.",
-      data: session
-    });
-
-  } catch (err) {
-
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-
-  }
-
-};
-// ==========================================
-// End Video Verification
-// ==========================================
-exports.endVideoVerification = async (req, res) => {
-  try {
-    const { sessionId, remarks } = req.body;
-
-    const session = await VideoVerification.findById(sessionId)
-      .populate("pensioner");
-
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Video session not found.",
-      });
-    }
-
-    if (session.status === "COMPLETED") {
-      return res.status(400).json({
-        success: false,
-        message: "Session already completed.",
-      });
-    }
-
-    session.endTime = new Date();
-
-    session.duration = Math.floor(
-      (session.endTime - session.startTime) / 1000
-    );
-
-    session.status = "COMPLETED";
-    session.remarks = remarks || "";
-
-    // Officer confirms pensioner is alive
-    session.isAliveConfirmed = true;
-
-    // Update pensioner record
-    const pensioner = session.pensioner;
-
-    pensioner.verified = true;
-    pensioner.faceMatched = true;
-    pensioner.livenessPassed = true;
-    pensioner.verifiedAt = new Date();
-
-    await pensioner.save();
-    await session.save();
-
-    res.json({
-      success: true,
-      message: "Video verification completed successfully.",
-      data: session,
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+    res.json({ success: true, message: "Call ended" });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-
-// ==========================================
-// Capture Evidence
-// ==========================================
+// 5. Capture Evidence
 exports.captureEvidence = async (req, res) => {
   try {
-
-    const { sessionId } = req.body;
-
-    const session = await VideoVerification.findById(sessionId);
-
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found.",
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Evidence image required.",
-      });
-    }
-
-    session.evidenceImages.push(
-      "/uploads/videoEvidence/" + req.file.filename
-    );
-
+    const session = await VideoVerification.findById(req.params.id);
+    if (!session || !req.file) return res.status(400).json({ success: false, message: "Invalid request" });
+    session.evidenceImages.push("/uploads/evidence/" + req.file.filename);
     await session.save();
-
-    res.json({
-      success: true,
-      message: "Evidence captured successfully.",
-      images: session.evidenceImages,
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-
-  }
+    res.json({ success: true, data: session });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-
-// ==========================================
-// Get Session Details
-// ==========================================
-exports.getSession = async (req, res) => {
+// 6. Complete Verification
+exports.completeVerification = async (req, res) => {
   try {
+    const session = await VideoVerification.findById(req.params.id);
+    session.callStatus = "VERIFIED";
+    await session.save();
+    res.json({ success: true, message: "Verification complete" });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
 
-    const session = await VideoVerification.findById(
-      req.params.id
-    )
-      .populate("pensioner")
-      .populate("officer");
+// 7. Get Pending Calls
+exports.getPendingCalls = async (req, res) => {
+  const pending = await VideoVerification.find({ callStatus: "WAITING" });
+  res.json({ success: true, data: pending });
+};
 
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found.",
-      });
-    }
+// 8. Get Call History
+exports.getCallHistory = async (req, res) => {
+  const history = await VideoVerification.find({ callStatus: "COMPLETED" });
+  res.json({ success: true, data: history });
+};
 
-    res.json({
-      success: true,
-      data: session,
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-
-  }
+// 9. Get Call Details
+exports.getCallDetails = async (req, res) => {
+  const session = await VideoVerification.findById(req.params.id);
+  res.json({ success: true, data: session });
 };
