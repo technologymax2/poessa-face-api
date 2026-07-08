@@ -54,7 +54,7 @@ const PatientVideoCall = () => {
         setLoading(false);
       } catch (err) {
         console.error(err);
-        alert("ካሜራውን ማግኘት አልተቻለም።");
+        alert("ካሜራውን ወይም ማይክሮፎኑን ማግኘት አልተቻለም።");
       }
     };
 
@@ -62,6 +62,7 @@ const PatientVideoCall = () => {
 
     // ሲግናሊንግ ክስተቶች
     socket.on("offer", async (offer) => {
+      if (!peerConnection.current) return;
       await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnection.current.createAnswer();
       await peerConnection.current.setLocalDescription(answer);
@@ -69,14 +70,14 @@ const PatientVideoCall = () => {
     });
 
     socket.on("answer", async (answer) => {
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+      await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(answer));
       setConnected(true);
     });
 
     socket.on("ice-candidate", async (candidate) => {
       try {
-        await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (err) { console.error(err); }
+        if (peerConnection.current) await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) { console.error("Error adding ice candidate:", err); }
     });
 
     socket.on("chat-message", (data) => {
@@ -88,11 +89,13 @@ const PatientVideoCall = () => {
       socket.off("answer");
       socket.off("ice-candidate");
       socket.off("chat-message");
+      if (peerConnection.current) peerConnection.current.close();
     };
   }, [roomId]);
 
-  // 2. ሌሎች ተግባራት
+  // 2. ተግባራት
   const startCall = async () => {
+    if (!peerConnection.current) return;
     const offer = await peerConnection.current.createOffer();
     await peerConnection.current.setLocalDescription(offer);
     socket.emit("offer", { roomId, offer });
