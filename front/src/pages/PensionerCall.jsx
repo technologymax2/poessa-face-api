@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Peer from "simple-peer";
 import io from "socket.io-client";
+import axios from "axios";
 
 const API = process.env.REACT_APP_API_URL || "https://poessa-digital-services-1.onrender.com";
 const socket = io(API, { transports: ["websocket", "polling"] });
@@ -59,6 +60,17 @@ const PensionerCall = () => {
     setRoomId(room);
     setCalling(true);
     setCallStatus("searching");
+    socket.emit("registerPensioner", {
+    pensionerId: fayda
+});
+
+socket.emit("joinRoom", {
+    roomId: room
+});
+    await axios.post(`${API}/api/video/request-call`, {
+    roomId: room,
+    pensionerId: fayda
+});
 
     socket.emit("requestCall", { roomId: room, pensionerId: fayda });
 
