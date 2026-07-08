@@ -11,7 +11,7 @@ import EditPensioner from "./pages/EditPensioner";
 import Liveness from "./pages/Liveness";
 import RenewalManagement from "./pages/RenewalManagement";
 import Report from "./pages/Report";
-// Components
+import PatientVideoCall from "./pages/PatientVideoCall";
 import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
@@ -53,7 +53,10 @@ function App() {
     path="/video-verification"
     element={<VideoVerification />}
 />
-      
+      <Route
+  path="/patient-video/:roomId"
+  element={<PatientVideoCall />}
+/>
         </Route>
 
         {/* 404 Page */}
