@@ -51,7 +51,7 @@ function App() {
 />
     <Route
     path="/video-verification"
-    element={<VideoVerification />}
+    element={<OfficerCallCenter />}
 />
       <Route
   path="/patient-video/:roomId"
