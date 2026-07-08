@@ -77,7 +77,8 @@ const Navbar = () => {
                 <NavLink to="/dashboard" className={navLinkClass} onClick={() => setIsOpen(false)}>Dashboard</NavLink>
                 <NavLink to="/renewal" className={navLinkClass} onClick={() => setIsOpen(false)}>Renewal</NavLink>
                 <NavLink to="/reports" className={navLinkClass} onClick={() => setIsOpen(false)}>Reports</NavLink>
-                <NavLink to="/patient-video/demo-room" className={navLinkClass} onClick={() => setIsOpen(false)}>Video Call</NavLink>
+                <NavLink to="/patient-video/demo-room" className={navLinkClass} onClick={() => setIsOpen(false)}>Pentioner Call</NavLink>
+                <NavLink to="/video-verification"className={navLinkClass}>Answor Call</NavLink>
               </>
             )}
             <div className="pt-2">
