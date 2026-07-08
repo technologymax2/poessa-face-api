@@ -1,94 +1,309 @@
 const { Server } = require("socket.io");
 
 module.exports = (server) => {
-  const io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-  });
 
-  const connectedUsers = new Map(); // userId -> {socketId, role}
-  const activeRooms = new Map();    // roomId -> {officer, pensioner, startedAt}
-  const waitingQueue = [];          // Array of objects for waiting calls
-  const busyOfficers = new Map();   // officerId -> roomId
+const io = new Server(server,{
+    cors:{
+        origin:"*",
+        credentials:true
+    }
+});
 
-  io.on("connection", (socket) => {
-    console.log("Socket Connected:", socket.id);
+const officers=new Map();
+const pensioners=new Map();
+const waitingQueue=[];
+const rooms=new Map();
 
-    // 1. ምዝገባ (Registration)
-    socket.on("register", ({ userId, role }) => {
-      socket.userId = userId;
-      socket.role = role;
-      connectedUsers.set(userId, { socketId: socket.id, role });
-      console.log(`${role} Registered -> ${userId}`);
-    });
+function broadcastQueue(){
 
-    // 2. ጥሪ መጠየቅ (Request Video Verification)
-    socket.on("requestVideoVerification", (data) => {
-      const queueItem = { ...data, requestedAt: new Date(), status: "WAITING" };
-      waitingQueue.push(queueItem);
-      io.emit("queueUpdated", waitingQueue);
-    });
+    io.emit("queueUpdated",waitingQueue);
 
-    // 3. ኦፊሰር ጥሪ መቀበል (Accept Call)
-    socket.on("acceptCall", ({ roomId, officerId }) => {
-      const room = waitingQueue.find((r) => r.roomId === roomId);
-      if (room) {
-        room.status = "CONNECTED";
-        socket.join(roomId);
-        busyOfficers.set(officerId, roomId);
-        io.to(roomId).emit("callAccepted", room);
-        io.emit("queueUpdated", waitingQueue);
-      }
-    });
+}
 
-    // 4. WebRTC Signalling (Offer, Answer, ICE Candidate)
-    socket.on("offer", ({ roomId, offer }) => {
-      socket.to(roomId).emit("offer", { offer, sender: socket.userId });
-    });
+function findFreeOfficer(){
 
-    socket.on("answer", ({ roomId, answer }) => {
-      socket.to(roomId).emit("answer", { answer, sender: socket.userId });
-    });
+    for(const [id,user] of officers){
 
-    socket.on("iceCandidate", ({ roomId, candidate }) => {
-      socket.to(roomId).emit("iceCandidate", { candidate, sender: socket.userId });
-    });
+        if(user.status==="AVAILABLE"){
 
-    // 5. የቻት እና የካሜራ መቆጣጠሪያዎች
-    socket.on("chatMessage", ({ roomId, message }) => {
-      io.to(roomId).emit("chatMessage", { 
-        sender: socket.userId, 
-        message, 
-        createdAt: new Date() 
-      });
-    });
+            return user;
 
-    socket.on("cameraOn", ({ roomId }) => io.to(roomId).emit("cameraOn", { userId: socket.userId }));
-    socket.on("cameraOff", ({ roomId }) => io.to(roomId).emit("cameraOff", { userId: socket.userId }));
-    socket.on("micOn", ({ roomId }) => io.to(roomId).emit("micOn", { userId: socket.userId }));
-    socket.on("micOff", ({ roomId }) => io.to(roomId).emit("micOff", { userId: socket.userId }));
+        }
 
-    // 6. ማስረጃ መያዝ (Capture Evidence)
-    socket.on("captureEvidence", ({ roomId, image }) => {
-      io.to(roomId).emit("captureEvidence", { capturedBy: socket.userId, image });
-    });
+    }
 
-    // 7. ጥሪ ማጠናቀቅ (End Call)
-    socket.on("endCall", ({ roomId, officerId }) => {
-      busyOfficers.delete(officerId);
-      io.to(roomId).emit("callEnded", { roomId });
-      console.log("Call Ended:", roomId);
-    });
+    return null;
 
-    // 8. መቋረጥ (Disconnect)
-    socket.on("disconnect", () => {
-      console.log("Disconnected:", socket.id);
-      connectedUsers.delete(socket.userId);
-    });
-  });
+}
 
-  return io;
+io.on("connection",(socket)=>{
+
+console.log("Connected",socket.id);
+
+////////////////////////////////////////////////////
+// REGISTER
+////////////////////////////////////////////////////
+
+socket.on("register",({userId,role,name})=>{
+
+    if(role==="OFFICER"){
+
+        officers.set(userId,{
+            userId,
+            socketId:socket.id,
+            name,
+            status:"AVAILABLE",
+            roomId:null
+        });
+
+        console.log("Officer Registered",name);
+
+    }
+
+    if(role==="PENSIONER"){
+
+        pensioners.set(userId,{
+            userId,
+            socketId:socket.id,
+            roomId:null
+        });
+
+        console.log("Pensioner Registered");
+
+    }
+
+    io.emit("officerStatus",Array.from(officers.values()));
+
+});
+
+////////////////////////////////////////////////////
+// REQUEST CALL
+////////////////////////////////////////////////////
+
+socket.on("requestCall",(data)=>{
+
+    const roomId="ROOM-"+Date.now();
+
+    const room={
+
+        roomId,
+
+        pensionerId:data.pensionerId,
+
+        faydaNumber:data.faydaNumber,
+
+        pensionerName:data.name,
+
+        officer:null,
+
+        status:"WAITING"
+
+    };
+
+    waitingQueue.push(room);
+
+    broadcastQueue();
+
+    const freeOfficer=findFreeOfficer();
+
+    if(freeOfficer){
+
+        io.to(freeOfficer.socketId).emit("incomingCall",room);
+
+    }
+
+});
+
+////////////////////////////////////////////////////
+// ACCEPT
+////////////////////////////////////////////////////
+
+socket.on("acceptCall",({roomId,officerId})=>{
+
+const room=waitingQueue.find(r=>r.roomId===roomId);
+
+if(!room) return;
+
+const officer=officers.get(officerId);
+
+room.status="CONNECTED";
+
+room.officer=officerId;
+
+officer.status="BUSY";
+
+officer.roomId=roomId;
+
+rooms.set(roomId,room);
+
+socket.join(roomId);
+
+const pensioner=pensioners.get(room.pensionerId);
+
+if(pensioner){
+
+    io.sockets.sockets.get(pensioner.socketId)?.join(roomId);
+
+}
+
+io.to(roomId).emit("callAccepted",room);
+
+broadcastQueue();
+
+});
+
+////////////////////////////////////////////////////
+// OFFER
+////////////////////////////////////////////////////
+
+socket.on("offer",data=>{
+
+socket.to(data.roomId).emit("offer",data);
+
+});
+
+////////////////////////////////////////////////////
+// ANSWER
+////////////////////////////////////////////////////
+
+socket.on("answer",data=>{
+
+socket.to(data.roomId).emit("answer",data);
+
+});
+
+////////////////////////////////////////////////////
+// ICE
+////////////////////////////////////////////////////
+
+socket.on("iceCandidate",data=>{
+
+socket.to(data.roomId).emit("iceCandidate",data);
+
+});
+
+////////////////////////////////////////////////////
+// CHAT
+////////////////////////////////////////////////////
+
+socket.on("chatMessage",data=>{
+
+io.to(data.roomId).emit("chatMessage",{
+
+sender:data.sender,
+
+message:data.message,
+
+time:new Date()
+
+});
+
+});
+
+////////////////////////////////////////////////////
+// CAMERA
+////////////////////////////////////////////////////
+
+socket.on("cameraOn",(data)=>{
+
+io.to(data.roomId).emit("cameraOn");
+
+});
+
+socket.on("cameraOff",(data)=>{
+
+io.to(data.roomId).emit("cameraOff");
+
+});
+
+socket.on("micOn",(data)=>{
+
+io.to(data.roomId).emit("micOn");
+
+});
+
+socket.on("micOff",(data)=>{
+
+io.to(data.roomId).emit("micOff");
+
+});
+
+////////////////////////////////////////////////////
+// SCREENSHOT
+////////////////////////////////////////////////////
+
+socket.on("captureEvidence",(data)=>{
+
+io.to(data.roomId).emit("captureEvidence",data);
+
+});
+
+////////////////////////////////////////////////////
+// END CALL
+////////////////////////////////////////////////////
+
+socket.on("endCall",({roomId,officerId})=>{
+
+const room=rooms.get(roomId);
+
+if(room){
+
+room.status="COMPLETED";
+
+}
+
+const officer=officers.get(officerId);
+
+if(officer){
+
+officer.status="AVAILABLE";
+
+officer.roomId=null;
+
+}
+
+rooms.delete(roomId);
+
+io.to(roomId).emit("callEnded");
+
+io.emit("officerStatus",Array.from(officers.values()));
+
+});
+
+////////////////////////////////////////////////////
+// DISCONNECT
+////////////////////////////////////////////////////
+
+socket.on("disconnect",()=>{
+
+for(const [id,officer] of officers){
+
+if(officer.socketId===socket.id){
+
+officers.delete(id);
+
+}
+
+}
+
+for(const [id,pensioner] of pensioners){
+
+if(pensioner.socketId===socket.id){
+
+pensioners.delete(id);
+
+}
+
+}
+
+io.emit("officerStatus",Array.from(officers.values()));
+
+console.log("Disconnected");
+
+});
+
+});
+
+return io;
+
 };
