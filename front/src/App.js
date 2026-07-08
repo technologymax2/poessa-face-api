@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom"; // Link እዚህ ጋር ተጨምሯል
-
-// Pages
+import VideoVerification from "./pages/VideoVerification";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -49,6 +48,10 @@ function App() {
       <Route
   path="/reports"
   element={<Report />}
+/>
+    <Route
+    path="/video-verification"
+    element={<VideoVerification />}
 />
       
         </Route>
