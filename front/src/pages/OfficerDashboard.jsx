@@ -43,20 +43,9 @@ const OfficerCallCenter = () => {
       setCallStatus("incoming");
     });
 
-    socket.on("offer", ({ offer, sender }) => {
-      const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current });
-      
-      peer.on("signal", (signal) => {
-        socket.emit("answer", { roomId: incomingCall.roomId, answer: signal });
-      });
-
-      peer.on("stream", (stream) => {
-        if (remoteVideo.current) remoteVideo.current.srcObject = stream;
-      });
-
-      peer.signal(offer);
-      peerRef.current = peer;
-    });
+    socket.on("offer", ({ offer }) => {
+  peerRef.current?.signal(offer);
+});
 
     socket.on("iceCandidate", ({ candidate }) => {
       peerRef.current?.signal(candidate);
@@ -70,17 +59,36 @@ const OfficerCallCenter = () => {
   }, [initCamera, user._id, user.fullName, incomingCall?.roomId]);
 
   const acceptCall = () => {
+  socket.emit("joinRoom", { roomId: incomingCall.roomId });
 
-    socket.emit("joinRoom", {
-        roomId: incomingCall.roomId
+  const peer = new Peer({
+    initiator: false,
+    trickle: false,
+    stream: streamRef.current,
+    config: {
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    },
+  });
+
+  peer.on("signal", (signal) => {
+    socket.emit("answer", {
+      roomId: incomingCall.roomId,
+      answer: signal,
     });
+  });
 
-    socket.emit("acceptCall", {
-        roomId: incomingCall.roomId,
-        officerId: user._id
-    });
+  peer.on("stream", (stream) => {
+    if (remoteVideo.current) remoteVideo.current.srcObject = stream;
+  });
 
-    setCallStatus("connected");
+  peerRef.current = peer;
+
+  socket.emit("acceptCall", {
+    roomId: incomingCall.roomId,
+    officerId: user._id,
+  });
+
+  setCallStatus("connected");
 };
 
   const endCall = () => {
