@@ -30,7 +30,10 @@ const OfficerCallCenter = () => {
 
   useEffect(() => {
     initCamera();
-    socket.emit("registerOfficer", { officerId: user._id, fullName: user.fullName });
+    socket.emit("registerOfficer", {
+    officerId: user._id,
+    name: user.fullName
+});
 
     socket.on("queueUpdated", (data) => setQueue(data));
     
@@ -67,9 +70,18 @@ const OfficerCallCenter = () => {
   }, [initCamera, user._id, user.fullName, incomingCall?.roomId]);
 
   const acceptCall = () => {
-    socket.emit("acceptCall", { roomId: incomingCall.roomId, officerId: user._id });
+
+    socket.emit("joinRoom", {
+        roomId: incomingCall.roomId
+    });
+
+    socket.emit("acceptCall", {
+        roomId: incomingCall.roomId,
+        officerId: user._id
+    });
+
     setCallStatus("connected");
-  };
+};
 
   const endCall = () => {
     socket.emit("endCall", { roomId: incomingCall?.roomId, officerId: user._id });
