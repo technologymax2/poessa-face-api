@@ -54,7 +54,7 @@ const PensionerCall = () => {
     return () => socket.off();
   }, [initMedia]);
 
-  const startCall = () => {
+  const startCall = async () => {
     if (!fayda) return alert("እባክዎ ፋይዳ ቁጥር ያስገቡ");
     const room = `ROOM-${Date.now()}`;
     setRoomId(room);
