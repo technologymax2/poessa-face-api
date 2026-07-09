@@ -52,10 +52,7 @@ const verificationRoutes = require("./routes/verificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const renewalRoutes = require("./routes/renewalRoutes");
 const reportRoutes = require("./routes/reportRoutes");
-const videoRoutes = require("./routes/videoVerificationRoutes");
 
-
-app.use("/api/video", videoRoutes);
 app.use("/api/renewals", renewalRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/pensioners", pensionerRoutes);
