@@ -21,43 +21,57 @@ module.exports = (server) => {
         console.log("New client connected:", socket.id);
 
         async function assignOfficer() {
-            const waiting = waitingQueue[0];
-            if (!waiting) return;
-            const freeOfficer = await OfficerStatus.findOne({ online: true, busy: false });
-            if (!freeOfficer) return;
+            try {
+                const waiting = waitingQueue[0];
+                if (!waiting) return;
 
-            freeOfficer.busy = true;
-            await freeOfficer.save();
+                // Guard against legacy/corrupt records that are missing the
+                // required "officer" field — without this, findOne() can hand
+                // back a document that throws on .save() and crashes the process.
+                const freeOfficer = await OfficerStatus.findOne({
+                    online: true,
+                    busy: false,
+                    officer: { $exists: true, $ne: null },
+                });
+                if (!freeOfficer) return;
 
-            const socketId = officerSockets.get(String(freeOfficer.officer));
-            if (socketId) {
-                io.to(socketId).emit("incomingCall", waiting);
-            } else {
-                // Officer marked online but no live socket — revert and try again later
-                freeOfficer.busy = false;
+                freeOfficer.busy = true;
                 await freeOfficer.save();
-                console.warn(`⚠️ Officer ${freeOfficer.officer} has no active socket connection.`);
+
+                const socketId = officerSockets.get(String(freeOfficer.officer));
+                if (socketId) {
+                    io.to(socketId).emit("incomingCall", waiting);
+                } else {
+                    // Officer marked online but no live socket — revert and try again later
+                    freeOfficer.busy = false;
+                    await freeOfficer.save();
+                    console.warn(`⚠️ Officer ${freeOfficer.officer} has no active socket connection.`);
+                }
+            } catch (err) {
+                // Never let this escape as an unhandled rejection — log and move on.
+                console.error("❌ assignOfficer error:", err.message);
             }
         }
 
         // ---- Officer registration ----
         socket.on("registerOfficer", async (data) => {
-            const { officerId, name } = data || {};
-            if (!officerId) return;
-
-            // Track this socket so we can actually reach the officer later
-            officerSockets.set(String(officerId), socket.id);
-            connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
-
             try {
+                const { officerId, name } = data || {};
+                if (!officerId) {
+                    console.warn("⚠️ registerOfficer called without officerId");
+                    return;
+                }
+
+                officerSockets.set(String(officerId), socket.id);
+                connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
+
                 const officerObjectId = new Types.ObjectId(officerId);
                 await OfficerStatus.findOneAndUpdate(
                     { officer: officerObjectId },
                     { online: true, busy: false, lastSeen: new Date() },
-                    { upsert: true, new: true }
+                    { upsert: true, new: true, runValidators: true }
                 );
                 console.log(`✅ Officer ${name || officerId} registered on socket ${socket.id}`);
-                // In case someone was already waiting when this officer came online
                 assignOfficer();
             } catch (err) {
                 console.error("❌ Registration Error:", err.message);
@@ -66,128 +80,170 @@ module.exports = (server) => {
 
         // ---- Pensioner registration ----
         socket.on("registerPensioner", (data) => {
-            const { pensionerId } = data || {};
-            if (!pensionerId) return;
-            connectedUsers.set(socket.id, { userId: pensionerId, role: "PENSIONER" });
-            pensionerSockets.set(pensionerId, socket.id);
+            try {
+                const { pensionerId } = data || {};
+                if (!pensionerId) return;
+                connectedUsers.set(socket.id, { userId: pensionerId, role: "PENSIONER" });
+                pensionerSockets.set(pensionerId, socket.id);
+            } catch (err) {
+                console.error("❌ registerPensioner error:", err.message);
+            }
         });
 
         // ---- Room join (both sides must call this before signaling) ----
-        socket.on("joinRoom", ({ roomId }) => {
+        socket.on("joinRoom", ({ roomId } = {}) => {
             if (!roomId) return;
             socket.join(roomId);
             console.log(`Socket ${socket.id} joined room ${roomId}`);
         });
 
         socket.on("requestCall", async (data) => {
-            waitingQueue.push({ roomId: data.roomId, pensionerId: data.pensionerId, requestedAt: new Date() });
-            io.emit("queueUpdated", waitingQueue);
-            assignOfficer();
+            try {
+                const { roomId, pensionerId } = data || {};
+                if (!roomId || !pensionerId) return;
+                waitingQueue.push({ roomId, pensionerId, requestedAt: new Date() });
+                io.emit("queueUpdated", waitingQueue);
+                assignOfficer();
+            } catch (err) {
+                console.error("❌ requestCall error:", err.message);
+            }
         });
 
         socket.on("acceptCall", async (data) => {
-            const { roomId, officerId } = data;
-            socket.join(roomId); // safe to call again, no-op if already joined
-            activeCalls.set(roomId, { officerId });
+            try {
+                const { roomId, officerId } = data || {};
+                if (!roomId) return;
+                socket.join(roomId);
+                activeCalls.set(roomId, { officerId });
 
-            const call = await VideoCall.findOne({ roomId });
-            if (call) {
-                call.status = "CONNECTED";
-                call.officer = officerId;
-                call.startedAt = new Date();
-                await call.save();
+                const call = await VideoCall.findOne({ roomId });
+                if (call) {
+                    call.status = "CONNECTED";
+                    call.officer = officerId;
+                    call.startedAt = new Date();
+                    await call.save();
+                }
+
+                const index = waitingQueue.findIndex(q => q.roomId === roomId);
+                if (index !== -1) waitingQueue.splice(index, 1);
+
+                io.emit("queueUpdated", waitingQueue);
+                io.to(roomId).emit("callAccepted");
+            } catch (err) {
+                console.error("❌ acceptCall error:", err.message);
             }
-
-            const index = waitingQueue.findIndex(q => q.roomId === roomId);
-            if (index !== -1) waitingQueue.splice(index, 1);
-
-            io.emit("queueUpdated", waitingQueue);
-            io.to(roomId).emit("callAccepted");
         });
 
         // ---- WebRTC Signaling ----
-        // roomId is echoed back so clients never have to rely on stale local state
-        socket.on("offer", ({ roomId, offer }) => {
+        socket.on("offer", ({ roomId, offer } = {}) => {
+            if (!roomId) return;
             socket.to(roomId).emit("offer", { offer, sender: socket.id, roomId });
         });
 
-        socket.on("answer", ({ roomId, answer }) => {
+        socket.on("answer", ({ roomId, answer } = {}) => {
+            if (!roomId) return;
             socket.to(roomId).emit("answer", { answer, sender: socket.id, roomId });
         });
 
-        socket.on("iceCandidate", ({ roomId, candidate }) => {
+        socket.on("iceCandidate", ({ roomId, candidate } = {}) => {
+            if (!roomId) return;
             socket.to(roomId).emit("iceCandidate", { candidate, sender: socket.id, roomId });
         });
 
-        socket.on("chatMessage", ({ roomId, sender, message }) => {
+        socket.on("chatMessage", ({ roomId, sender, message } = {}) => {
+            if (!roomId) return;
             io.to(roomId).emit("chatMessage", { sender, message, createdAt: new Date() });
         });
 
-        socket.on("cameraOn", ({ roomId }) => { io.to(roomId).emit("cameraOn", { userId: socket.id }); });
-        socket.on("cameraOff", ({ roomId }) => { io.to(roomId).emit("cameraOff", { userId: socket.id }); });
-        socket.on("micOn", ({ roomId }) => { io.to(roomId).emit("micOn", { userId: socket.id }); });
-        socket.on("micOff", ({ roomId }) => { io.to(roomId).emit("micOff", { userId: socket.id }); });
-        socket.on("captureEvidence", ({ roomId, image }) => { io.to(roomId).emit("evidenceCaptured", { image, capturedBy: socket.id, createdAt: new Date() }); });
-        socket.on("recordingStarted", ({ roomId }) => { io.to(roomId).emit("recordingStarted"); });
-        socket.on("recordingStopped", ({ roomId }) => { io.to(roomId).emit("recordingStopped"); });
-        socket.on("saveNotes", ({ roomId, notes }) => { io.to(roomId).emit("notesUpdated", { notes }); });
+        socket.on("cameraOn", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("cameraOn", { userId: socket.id }); });
+        socket.on("cameraOff", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("cameraOff", { userId: socket.id }); });
+        socket.on("micOn", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("micOn", { userId: socket.id }); });
+        socket.on("micOff", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("micOff", { userId: socket.id }); });
+        socket.on("captureEvidence", ({ roomId, image } = {}) => { if (roomId) io.to(roomId).emit("evidenceCaptured", { image, capturedBy: socket.id, createdAt: new Date() }); });
+        socket.on("recordingStarted", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("recordingStarted"); });
+        socket.on("recordingStopped", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("recordingStopped"); });
+        socket.on("saveNotes", ({ roomId, notes } = {}) => { if (roomId) io.to(roomId).emit("notesUpdated", { notes }); });
 
-        socket.on("transferCall", async ({ roomId, fromOfficer, toOfficer }) => {
-            const targetSocket = officerSockets.get(String(toOfficer));
-            if (!targetSocket) {
-                socket.emit("transferFailed", { message: "Target officer is offline." });
-                return;
+        socket.on("transferCall", async ({ roomId, fromOfficer, toOfficer } = {}) => {
+            try {
+                if (!roomId || !toOfficer) return;
+                const targetSocket = officerSockets.get(String(toOfficer));
+                if (!targetSocket) {
+                    socket.emit("transferFailed", { message: "Target officer is offline." });
+                    return;
+                }
+                io.to(targetSocket).emit("incomingTransferredCall", { roomId, fromOfficer });
+                io.to(roomId).emit("callTransferred", { toOfficer });
+            } catch (err) {
+                console.error("❌ transferCall error:", err.message);
             }
-            io.to(targetSocket).emit("incomingTransferredCall", { roomId, fromOfficer });
-            io.to(roomId).emit("callTransferred", { toOfficer });
         });
 
-        socket.on("officerBusy", async ({ officerId }) => {
-            await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: true, lastSeen: new Date() });
-            io.emit("officerStatusUpdated");
-        });
-
-        socket.on("officerAvailable", async ({ officerId }) => {
-            await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: false, lastSeen: new Date() });
-            io.emit("officerStatusUpdated");
-            assignOfficer();
-        });
-
-        socket.on("endCall", async ({ roomId, officerId }) => {
-            activeCalls.delete(roomId);
-            io.to(roomId).emit("callEnded");
-
-            const call = await VideoCall.findOne({ roomId });
-            if (call) {
-                call.status = "COMPLETED";
-                call.endedAt = new Date();
-                await call.save();
+        socket.on("officerBusy", async ({ officerId } = {}) => {
+            try {
+                if (!officerId) return;
+                await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: true, lastSeen: new Date() });
+                io.emit("officerStatusUpdated");
+            } catch (err) {
+                console.error("❌ officerBusy error:", err.message);
             }
+        });
 
-            if (officerId) {
+        socket.on("officerAvailable", async ({ officerId } = {}) => {
+            try {
+                if (!officerId) return;
                 await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: false, lastSeen: new Date() });
-            }
-            assignOfficer();
-        });
-
-        socket.on("renewalCompleted", ({ roomId }) => { io.to(roomId).emit("renewalCompleted"); });
-        socket.on("auditEvent", ({ roomId, action, officer }) => { io.to(roomId).emit("auditEvent", { roomId, action, officer, time: new Date() }); });
-
-        socket.on("disconnect", async () => {
-            const user = connectedUsers.get(socket.id);
-            if (!user) return;
-            connectedUsers.delete(socket.id);
-
-            if (user.role === "OFFICER") {
-                officerSockets.delete(String(user.userId));
-                await OfficerStatus.findOneAndUpdate({ officer: user.userId }, { online: false, busy: false, lastSeen: new Date() });
                 io.emit("officerStatusUpdated");
                 assignOfficer();
+            } catch (err) {
+                console.error("❌ officerAvailable error:", err.message);
             }
-            if (user.role === "PENSIONER") {
-                pensionerSockets.delete(user.userId);
+        });
+
+        socket.on("endCall", async ({ roomId, officerId } = {}) => {
+            try {
+                if (!roomId) return;
+                activeCalls.delete(roomId);
+                io.to(roomId).emit("callEnded");
+
+                const call = await VideoCall.findOne({ roomId });
+                if (call) {
+                    call.status = "COMPLETED";
+                    call.endedAt = new Date();
+                    await call.save();
+                }
+
+                if (officerId) {
+                    await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: false, lastSeen: new Date() });
+                }
+                assignOfficer();
+            } catch (err) {
+                console.error("❌ endCall error:", err.message);
             }
-            console.log(`${socket.id} disconnected`);
+        });
+
+        socket.on("renewalCompleted", ({ roomId } = {}) => { if (roomId) io.to(roomId).emit("renewalCompleted"); });
+        socket.on("auditEvent", ({ roomId, action, officer } = {}) => { if (roomId) io.to(roomId).emit("auditEvent", { roomId, action, officer, time: new Date() }); });
+
+        socket.on("disconnect", async () => {
+            try {
+                const user = connectedUsers.get(socket.id);
+                if (!user) return;
+                connectedUsers.delete(socket.id);
+
+                if (user.role === "OFFICER") {
+                    officerSockets.delete(String(user.userId));
+                    await OfficerStatus.findOneAndUpdate({ officer: user.userId }, { online: false, busy: false, lastSeen: new Date() });
+                    io.emit("officerStatusUpdated");
+                    assignOfficer();
+                }
+                if (user.role === "PENSIONER") {
+                    pensionerSockets.delete(user.userId);
+                }
+                console.log(`${socket.id} disconnected`);
+            } catch (err) {
+                console.error("❌ disconnect handler error:", err.message);
+            }
         });
     });
 };
