@@ -3,8 +3,8 @@ import Peer from "simple-peer";
 import io from "socket.io-client";
 import axios from "axios";
 
-const API = process.env.REACT_APP_API_URL || "https://poessa-digital-services-1.onrender.com";
-const socket = io(API, { transports: ["websocket", "polling"] });
+const API = process.env.REACT_APP_API_URL; // ይህ አድራሻ .env ፋይልህ ላይ እንዳለ ነው (የሚያበቃው /api ላይ ነው)
+const socket = io(API.replace("/api", ""), { transports: ["websocket", "polling"] });
 
 const PensionerCall = () => {
   const myVideo = useRef(null);
@@ -18,7 +18,6 @@ const PensionerCall = () => {
   const [micOn, setMicOn] = useState(true);
   const [roomId, setRoomId] = useState("");
 
-  // ካሜራን በአግባቡ ለማስጀመር
   const initMedia = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -26,17 +25,15 @@ const PensionerCall = () => {
       if (myVideo.current) myVideo.current.srcObject = stream;
     } catch (err) {
       console.error("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም", err);
-      alert("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም። እባክዎ ፍቃድ ይስጡ።");
+      alert("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም።");
     }
   }, []);
 
   useEffect(() => {
     initMedia();
 
-    // ጥሪው ሲቀበል Peer-to-Peer መጀመር
     socket.on("callAccepted", () => {
       setCallStatus("connected");
-
       const peer = new Peer({
         initiator: true,
         trickle: false,
@@ -44,14 +41,10 @@ const PensionerCall = () => {
         config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] },
       });
 
-      peer.on("signal", (signal) => {
-        socket.emit("offer", { roomId, offer: signal });
-      });
-
+      peer.on("signal", (signal) => socket.emit("offer", { roomId, offer: signal }));
       peer.on("stream", (remoteStream) => {
         if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
       });
-
       peerRef.current = peer;
     });
 
@@ -61,11 +54,8 @@ const PensionerCall = () => {
     socket.on("callEnded", () => window.location.reload());
 
     return () => {
-      // ኮምፖነንቱ ሲዘጋ ሁሉንም ነገር ማጽዳት
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (peerRef.current) peerRef.current.destroy();
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      peerRef.current?.destroy();
       socket.off();
     };
   }, [initMedia, roomId]);
@@ -81,7 +71,8 @@ const PensionerCall = () => {
       socket.emit("registerPensioner", { pensionerId: fayda });
       socket.emit("joinRoom", { roomId: room });
       
-      await axios.post(`${API}/api/video/request-call`, {
+      // እዚህ ጋር /api ሳይኖር ጥሪውን እናደርጋለን (ምክንያቱም API variable ቀድሞውኑ /api አለው)
+      await axios.post(`${API}/video/request-call`, {
         roomId: room,
         pensionerId: fayda
       });
@@ -89,7 +80,7 @@ const PensionerCall = () => {
       socket.emit("requestCall", { roomId: room, pensionerId: fayda });
     } catch (err) {
       console.error("ጥሪ መጀመር አልተቻለም:", err);
-      alert("ጥሪ ለመጀመር አልተቻለም። እባክዎ እንደገና ይሞክሩ።");
+      alert("ጥሪ ለመጀመር አልተቻለም።");
       setCallStatus("idle");
     }
   };
@@ -102,18 +93,12 @@ const PensionerCall = () => {
 
   const toggleCamera = () => {
     const track = streamRef.current?.getVideoTracks()[0];
-    if (track) { 
-        track.enabled = !track.enabled; 
-        setCameraOn(track.enabled); 
-    }
+    if (track) { track.enabled = !track.enabled; setCameraOn(track.enabled); }
   };
 
   const toggleMic = () => {
     const track = streamRef.current?.getAudioTracks()[0];
-    if (track) { 
-        track.enabled = !track.enabled; 
-        setMicOn(track.enabled); 
-    }
+    if (track) { track.enabled = !track.enabled; setMicOn(track.enabled); }
   };
 
   return (
@@ -122,18 +107,8 @@ const PensionerCall = () => {
       
       {callStatus === "idle" && (
         <div className="bg-gray-800 p-6 rounded-xl">
-          <input 
-            value={fayda} 
-            onChange={(e) => setFayda(e.target.value)} 
-            placeholder="የፋይዳ ቁጥር" 
-            className="w-full p-4 mb-4 text-black rounded" 
-          />
-          <button 
-            onClick={startCall} 
-            className="w-full bg-blue-600 p-4 rounded font-bold text-lg"
-          >
-            Call Verification Officer
-          </button>
+          <input value={fayda} onChange={(e) => setFayda(e.target.value)} placeholder="የፋይዳ ቁጥር" className="w-full p-4 mb-4 text-black rounded" />
+          <button onClick={startCall} className="w-full bg-blue-600 p-4 rounded font-bold text-lg">Call Verification Officer</button>
         </div>
       )}
 
@@ -144,20 +119,12 @@ const PensionerCall = () => {
             <video ref={myVideo} autoPlay muted playsInline className="absolute bottom-4 right-4 w-24 h-32 bg-gray-600 rounded-lg border-2 border-white" />
           </div>
           
-          {callStatus === "searching" && (
-            <div className="text-center text-yellow-500 font-bold p-2">ባለሙያ በመፈለግ ላይ...</div>
-          )}
+          {callStatus === "searching" && <div className="text-center text-yellow-500 font-bold p-2">ባለሙያ በመፈለግ ላይ...</div>}
 
           <div className="flex justify-between bg-gray-800 p-4 rounded-xl">
-            <button onClick={toggleCamera} className="bg-blue-600 px-5 py-3 rounded-full font-bold">
-                Cam {cameraOn ? "ON" : "OFF"}
-            </button>
-            <button onClick={toggleMic} className="bg-blue-600 px-5 py-3 rounded-full font-bold">
-                Mic {micOn ? "ON" : "OFF"}
-            </button>
-            <button onClick={endCall} className="bg-red-600 px-5 py-3 rounded-full font-bold">
-                End Call
-            </button>
+            <button onClick={toggleCamera} className="bg-blue-600 px-5 py-3 rounded-full font-bold">Cam {cameraOn ? "ON" : "OFF"}</button>
+            <button onClick={toggleMic} className="bg-blue-600 px-5 py-3 rounded-full font-bold">Mic {micOn ? "ON" : "OFF"}</button>
+            <button onClick={endCall} className="bg-red-600 px-5 py-3 rounded-full font-bold">End Call</button>
           </div>
         </div>
       )}
