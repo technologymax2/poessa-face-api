@@ -128,10 +128,10 @@ const PensionerCall = () => {
         {statusMessage}
       </div>
 
-     {/* የቪዲዮ ስክሪኖች */}
-      <div className="relative w-full max-w-2xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
+    {/* የቪዲዮ ስክሪኖች */}
+      <div className="relative w-full max-w-sm h-[65vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 mx-auto">
         
-        {/* የሰራተኛው ቪዲዮ (ዋናው) */}
+        {/* የሰራተኛው ቪዲዮ (ሙሉ ስክሪን - Vertical) */}
         <video 
           ref={remoteVideo} 
           autoPlay 
@@ -139,14 +139,22 @@ const PensionerCall = () => {
           className="w-full h-full object-cover" 
         />
         
-        {/* የጡረተኛው ቪዲዮ (በግራ በኩል ከታች ተደራቢ) */}
+        {/* የጡረተኛው ቪዲዮ (በግራ በኩል ከታች በኩል፣ ጽሁፍ እንዳይሸፍን ከፍ ያለ) */}
         <video 
           ref={myVideo} 
           autoPlay 
           muted 
           playsInline 
-          className="absolute bottom-4 left-4 w-32 h-24 object-cover rounded-lg border-2 border-white shadow-lg" 
+          className="absolute bottom-20 left-4 w-24 h-32 object-cover rounded-xl border-2 border-white shadow-lg" 
         />
+      </div>
+
+      {/* የጥሪ ሁኔታ እና የጥሪ ጊዜ ጽሁፎች */}
+      <div className="mt-4 text-center">
+        <div className="text-blue-400 font-medium mb-2">{statusMessage}</div>
+        <div className="text-xl font-mono">
+          ⏱️ {Math.floor(callTime / 60)}:{String(callTime % 60).padStart(2, "0")}
+        </div>
       </div>
 
       <div className="mt-8 flex gap-4">
