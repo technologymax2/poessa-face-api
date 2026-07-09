@@ -3,7 +3,7 @@ import axios from "axios";
 import Peer from "simple-peer";
 import io from "socket.io-client";
 
-const API = process.env.REACT_APP_API_URL || "https://poessa-digital-services-1.onrender.com";
+const API = process.env.REACT_APP_API_URL;
 const socket = io(API, { transports: ["websocket", "polling"] });
 
 const OfficerCallCenter = () => {
