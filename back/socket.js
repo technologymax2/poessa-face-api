@@ -34,17 +34,30 @@ module.exports = (server) => {
             }
         }
 
-        socket.on("registerOfficer", async (data) => {
-            const { officerId, name } = data;
-            connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
-            officerSockets.set(String(officerId), socket.id);
-            await OfficerStatus.findOneAndUpdate(
-                { officer: officerId },
-                { online: true, busy: false, lastSeen: new Date() },
-                { upsert: true }
-            );
-            io.emit("officerStatusUpdated");
-        });
+      socket.on("registerOfficer", async (data) => {
+    const { officerId, name } = data;
+
+    // ተጨማሪ ማረጋገጫ (Validation)
+    if (!officerId) {
+        console.error("❌ Registration Failed: officerId is missing from client!");
+        return; 
+    }
+
+    connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
+    officerSockets.set(String(officerId), socket.id);
+
+    try {
+        await OfficerStatus.findOneAndUpdate(
+            { officer: officerId },
+            { online: true, busy: false, lastSeen: new Date() },
+            { upsert: true, new: true } // new: true መጨመር ለደህንነት ይረዳል
+        );
+        console.log(`✅ Officer ${name} registered successfully.`);
+        io.emit("officerStatusUpdated");
+    } catch (err) {
+        console.error("❌ Database update failed:", err.message);
+    }
+});
 
         socket.on("registerPensioner", (data) => {
             connectedUsers.set(socket.id, { userId: data.pensionerId, role: "PENSIONER" });
