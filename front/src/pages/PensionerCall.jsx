@@ -5,8 +5,8 @@ import io from "socket.io-client";
 const API = process.env.REACT_APP_API_URL.replace("/api", "");
 const socket = io(API, { transports: ["websocket"], withCredentials: true });
 
-// STUN servers help peers find their public IP. 
-// For production, replace these with a real TURN server (e.g., Twilio or Twilio-like service)
+// CRITICAL: For international calls, replace STUN with a paid TURN service
+// if your connection remains stuck in 'checking' or 'failed'.
 const ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -19,6 +19,7 @@ const PensionerCall = () => {
   const remoteVideo = useRef(null);
   const peerRef = useRef(null);
   const streamRef = useRef(null);
+  const roomIdRef = useRef(null);
 
   const [callStatus, setCallStatus] = useState("idle");
   const [statusMessage, setStatusMessage] = useState("ለመጀመር ዝግጁ");
@@ -32,21 +33,9 @@ const PensionerCall = () => {
       })
       .catch((err) => console.error("Camera access failed:", err));
 
-    socket.on("callAccepted", () => {
-      setCallStatus("connected");
-      setStatusMessage("ጥሪው ተገናኝቷል");
-    });
-
     socket.on("answer", ({ answer }) => {
-      if (peerRef.current) {
-        peerRef.current.signal(answer);
-      }
-    });
-
-    socket.on("iceCandidate", ({ candidate }) => {
-      if (peerRef.current) {
-        peerRef.current.signal(candidate);
-      }
+      // Receive the officer's answer and complete the handshake
+      if (peerRef.current) peerRef.current.signal(answer);
     });
 
     socket.on("callEnded", () => {
@@ -55,9 +44,7 @@ const PensionerCall = () => {
     });
 
     return () => {
-      socket.off("callAccepted");
       socket.off("answer");
-      socket.off("iceCandidate");
       socket.off("callEnded");
     };
   }, []);
@@ -75,24 +62,30 @@ const PensionerCall = () => {
     setStatusMessage("ለሰራተኛ በመደወል ላይ...");
 
     const roomId = `room_${socket.id}`;
+    roomIdRef.current = roomId;
     socket.emit("joinRoom", { roomId });
     socket.emit("requestCall", { roomId, pensionerId: socket.id });
 
     // Initialize Peer
     const peer = new Peer({
       initiator: true,
-      trickle: false, // Ensure this matches OfficerDashboard
+      trickle: false, // Wait for all ICE candidates to gather
       stream: streamRef.current,
       config: ICE_CONFIG
     });
 
     peer.on("signal", (data) => {
+      // With trickle: false, this event fires once the offer is ready
       socket.emit("offer", { roomId, offer: data });
     });
 
     peer.on("stream", (remoteStream) => {
       if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+      setCallStatus("connected");
+      setStatusMessage("ጥሪው ተገናኝቷል");
     });
+
+    peer.on("error", (err) => console.error("Peer Error:", err));
 
     peerRef.current = peer;
   };
