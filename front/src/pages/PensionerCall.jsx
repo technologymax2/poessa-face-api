@@ -77,6 +77,7 @@ const PensionerCall = () => {
     if (!fayda) return alert("እባክዎ ፋይዳ ቁጥር ያስገቡ");
     const room = `ROOM-${Date.now()}`;
     setRoomId(room);
+    const currentRoom = room;
     setCalling(true);
     setCallStatus("searching");
     socket.emit("registerPensioner", {
