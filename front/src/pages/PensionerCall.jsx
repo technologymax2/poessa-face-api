@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Peer from "simple-peer";
 import io from "socket.io-client";
-import "./VideoCallAccess.css"; // የእርስዎን የCSS ፋይል ይጠቀሙ
 
-const API = process.env.REACT_APP_BACKEND_URL || "https://poessa-digital-services-1.onrender.com";
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const socket = io(API, {
   transports: ["websocket", "polling"],
