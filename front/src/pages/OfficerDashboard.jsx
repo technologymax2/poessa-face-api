@@ -5,7 +5,7 @@ import io from "socket.io-client";
 const API = process.env.REACT_APP_API_URL.replace("/api", "");
 const socket = io(API, { transports: ["websocket"], withCredentials: true });
 
-// CRITICAL: Ensure this matches PensionerCall.jsx exactly.
+// CRITICAL: Must match the configuration on the Pensioner side exactly.
 const ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -44,20 +44,25 @@ const OfficerCallCenter = () => {
 
     socket.on("offer", ({ offer, roomId }) => {
       const peer = new Peer({
-        initiator: false, // Officer receives the offer
-        trickle: false,
+        initiator: false, // Officer is the receiver
+        trickle: false,   // Must match the pensioner
         stream: streamRef.current,
-        config: ICE_CONFIG // Added for connectivity
+        config: ICE_CONFIG
       });
 
       peer.on("signal", (signal) => {
+        // Send the answer back to the pensioner
         socket.emit("answer", { roomId, answer: signal });
       });
 
       peer.on("stream", (remoteStream) => {
         if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+        setCallStatus("connected");
       });
 
+      peer.on("error", (err) => console.error("Peer Error:", err));
+
+      // Accept the offer from the pensioner
       peer.signal(offer);
       peerRef.current = peer;
     });
@@ -84,8 +89,8 @@ const OfficerCallCenter = () => {
 
   const acceptCall = () => {
     if (!incomingCall) return;
-    socket.emit("acceptCall", { roomId: incomingCall.roomId, officerId: user._id });
     setCallStatus("connected");
+    // The actual WebRTC connection is triggered by the 'offer' event handler above
   };
 
   return (
@@ -103,11 +108,15 @@ const OfficerCallCenter = () => {
             ጥሪ ተቀበል
           </button>
         )}
-        {callStatus === "connected" && (
+        {(callStatus === "connected" || callStatus === "incoming") && (
           <button onClick={cleanupPeer} className="bg-red-600 px-8 py-3 rounded-full font-bold">
             ጥሪ ዝጋ
           </button>
         )}
+      </div>
+
+      <div className="mt-4 text-gray-400">
+        Status: <span className="text-blue-400">{callStatus}</span>
       </div>
     </div>
   );
