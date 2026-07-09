@@ -28,15 +28,7 @@ const OfficerCallCenter = () => {
   useEffect(() => {
     initCamera();
 
-    if (!user._id) {
-      console.error("❌ Officer not registered (User ID missing)!");
-      return;
-    }
-
-    socket.emit("registerOfficer", {
-      officerId: user._id,
-      name: user.fullName,
-    });
+ 
 
     socket.on("incomingCall", (data) => {
       console.log("📞 New call incoming:", data);
