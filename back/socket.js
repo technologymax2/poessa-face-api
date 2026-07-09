@@ -1,4 +1,5 @@
 const { Server } = require("socket.io");
+const { Types } = require("mongoose");
 const VideoCall = require("./models/VideoCall");
 const OfficerStatus = require("./models/OfficerStatus");
 
@@ -8,9 +9,9 @@ module.exports = (server) => {
         transports: ["websocket", "polling"]
     });
 
-    const connectedUsers = new Map();
-    const officerSockets = new Map();
-    const pensionerSockets = new Map();
+    const connectedUsers = new Map();   // socket.id -> { userId, role }
+    const officerSockets = new Map();   // officerId (string) -> socket.id
+    const pensionerSockets = new Map(); // pensionerId -> socket.id
     const waitingQueue = [];
     const activeCalls = new Map();
 
@@ -27,38 +28,55 @@ module.exports = (server) => {
 
             freeOfficer.busy = true;
             await freeOfficer.save();
+
             const socketId = officerSockets.get(String(freeOfficer.officer));
             if (socketId) {
-                // መፍትሄ፡ 'incomingCall' የሚለው ኢቨንት በOfficerCallCenter ላይ 'incomingCall' ተብሎ መጠበቅ አለበት
                 io.to(socketId).emit("incomingCall", waiting);
+            } else {
+                // Officer marked online but no live socket — revert and try again later
+                freeOfficer.busy = false;
+                await freeOfficer.save();
+                console.warn(`⚠️ Officer ${freeOfficer.officer} has no active socket connection.`);
             }
         }
 
-// socket.js ውስጥ ያለውን registerOfficer በዚህ መንገድ ያርሙ
-const { ObjectId } = require('mongoose').Types; // ይህንን ከላይ ይጨምሩ
+        // ---- Officer registration ----
+        socket.on("registerOfficer", async (data) => {
+            const { officerId, name } = data || {};
+            if (!officerId) return;
 
-socket.on("registerOfficer", async (data) => {
-    const { officerId, name } = data;
-    
-    if (!officerId) return;
+            // Track this socket so we can actually reach the officer later
+            officerSockets.set(String(officerId), socket.id);
+            connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
 
-    try {
-        // String ID ወደ ObjectId መለወጥ (ይህ validation ስህተቱን ያስወግዳል)
-        const officerObjectId = new ObjectId(officerId); 
+            try {
+                const officerObjectId = new Types.ObjectId(officerId);
+                await OfficerStatus.findOneAndUpdate(
+                    { officer: officerObjectId },
+                    { online: true, busy: false, lastSeen: new Date() },
+                    { upsert: true, new: true }
+                );
+                console.log(`✅ Officer ${name || officerId} registered on socket ${socket.id}`);
+                // In case someone was already waiting when this officer came online
+                assignOfficer();
+            } catch (err) {
+                console.error("❌ Registration Error:", err.message);
+            }
+        });
 
-        await OfficerStatus.findOneAndUpdate(
-            { officer: officerObjectId }, 
-            { online: true, busy: false, lastSeen: new Date() },
-            { upsert: true, new: true }
-        );
-        console.log(`✅ Officer ${name} registered.`);
-    } catch (err) {
-        console.error("❌ Registration Error:", err.message);
-    }
-});
+        // ---- Pensioner registration ----
         socket.on("registerPensioner", (data) => {
-            connectedUsers.set(socket.id, { userId: data.pensionerId, role: "PENSIONER" });
-            pensionerSockets.set(data.pensionerId, socket.id);
+            const { pensionerId } = data || {};
+            if (!pensionerId) return;
+            connectedUsers.set(socket.id, { userId: pensionerId, role: "PENSIONER" });
+            pensionerSockets.set(pensionerId, socket.id);
+        });
+
+        // ---- Room join (both sides must call this before signaling) ----
+        socket.on("joinRoom", ({ roomId }) => {
+            if (!roomId) return;
+            socket.join(roomId);
+            console.log(`Socket ${socket.id} joined room ${roomId}`);
         });
 
         socket.on("requestCall", async (data) => {
@@ -69,8 +87,9 @@ socket.on("registerOfficer", async (data) => {
 
         socket.on("acceptCall", async (data) => {
             const { roomId, officerId } = data;
-            socket.join(roomId);
+            socket.join(roomId); // safe to call again, no-op if already joined
             activeCalls.set(roomId, { officerId });
+
             const call = await VideoCall.findOne({ roomId });
             if (call) {
                 call.status = "CONNECTED";
@@ -78,27 +97,26 @@ socket.on("registerOfficer", async (data) => {
                 call.startedAt = new Date();
                 await call.save();
             }
+
             const index = waitingQueue.findIndex(q => q.roomId === roomId);
             if (index !== -1) waitingQueue.splice(index, 1);
+
             io.emit("queueUpdated", waitingQueue);
             io.to(roomId).emit("callAccepted");
         });
 
-        socket.on("joinRoom", ({ roomId }) => {
-            socket.join(roomId);
-        });
-
-        // WebRTC Signaling - ቪዲዮው እንዲገናኝ እነዚህ ኢቨንቶች በroomId መላካቸውን እናረጋግጣለን
+        // ---- WebRTC Signaling ----
+        // roomId is echoed back so clients never have to rely on stale local state
         socket.on("offer", ({ roomId, offer }) => {
-            socket.to(roomId).emit("offer", { offer, sender: socket.id });
+            socket.to(roomId).emit("offer", { offer, sender: socket.id, roomId });
         });
 
         socket.on("answer", ({ roomId, answer }) => {
-            socket.to(roomId).emit("answer", { answer, sender: socket.id });
+            socket.to(roomId).emit("answer", { answer, sender: socket.id, roomId });
         });
 
         socket.on("iceCandidate", ({ roomId, candidate }) => {
-            socket.to(roomId).emit("iceCandidate", { candidate, sender: socket.id });
+            socket.to(roomId).emit("iceCandidate", { candidate, sender: socket.id, roomId });
         });
 
         socket.on("chatMessage", ({ roomId, sender, message }) => {
@@ -115,7 +133,7 @@ socket.on("registerOfficer", async (data) => {
         socket.on("saveNotes", ({ roomId, notes }) => { io.to(roomId).emit("notesUpdated", { notes }); });
 
         socket.on("transferCall", async ({ roomId, fromOfficer, toOfficer }) => {
-            const targetSocket = officerSockets.get(toOfficer);
+            const targetSocket = officerSockets.get(String(toOfficer));
             if (!targetSocket) {
                 socket.emit("transferFailed", { message: "Target officer is offline." });
                 return;
@@ -138,12 +156,14 @@ socket.on("registerOfficer", async (data) => {
         socket.on("endCall", async ({ roomId, officerId }) => {
             activeCalls.delete(roomId);
             io.to(roomId).emit("callEnded");
+
             const call = await VideoCall.findOne({ roomId });
             if (call) {
                 call.status = "COMPLETED";
                 call.endedAt = new Date();
                 await call.save();
             }
+
             if (officerId) {
                 await OfficerStatus.findOneAndUpdate({ officer: officerId }, { busy: false, lastSeen: new Date() });
             }
@@ -157,8 +177,9 @@ socket.on("registerOfficer", async (data) => {
             const user = connectedUsers.get(socket.id);
             if (!user) return;
             connectedUsers.delete(socket.id);
+
             if (user.role === "OFFICER") {
-                officerSockets.delete(user.userId);
+                officerSockets.delete(String(user.userId));
                 await OfficerStatus.findOneAndUpdate({ officer: user.userId }, { online: false, busy: false, lastSeen: new Date() });
                 io.emit("officerStatusUpdated");
                 assignOfficer();
