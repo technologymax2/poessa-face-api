@@ -88,32 +88,32 @@ const PensionerCall = () => {
 
       socket.emit("requestCall", { roomId: room, pensionerId: fayda });
     } catch (err) {
-      alert("ጥሪ ለመጀመር አልተቻለም");
+      console.error("ጥሪ መጀመር አልተቻለም:", err);
+      alert("ጥሪ ለመጀመር አልተቻለም። እባክዎ እንደገና ይሞክሩ።");
       setCallStatus("idle");
     }
   };
 
   const endCall = () => {
     socket.emit("endCall", { roomId });
-    peerRef.current?.destroy();
+    if (peerRef.current) peerRef.current.destroy();
     window.location.reload();
   };
 
   const toggleCamera = () => {
     const track = streamRef.current?.getVideoTracks()[0];
-    if (track) { track.enabled = !track.enabled; setCameraOn(track.enabled); }
+    if (track) { 
+        track.enabled = !track.enabled; 
+        setCameraOn(track.enabled); 
+    }
   };
 
   const toggleMic = () => {
     const track = streamRef.current?.getAudioTracks()[0];
-    if (track) { track.enabled = !track.enabled; setMicOn(track.enabled); }
-  };
-
-  const sendMessage = () => {
-    if (!message.trim()) return;
-    socket.emit("chatMessage", { roomId, message, sender: "Pensioner" });
-    setMessages((prev) => [...prev, { sender: "You", message }]);
-    setMessage("");
+    if (track) { 
+        track.enabled = !track.enabled; 
+        setMicOn(track.enabled); 
+    }
   };
 
   return (
@@ -122,8 +122,18 @@ const PensionerCall = () => {
       
       {callStatus === "idle" && (
         <div className="bg-gray-800 p-6 rounded-xl">
-          <input value={fayda} onChange={(e) => setFayda(e.target.value)} placeholder="የፋይዳ ቁጥር" className="w-full p-4 mb-4 text-black rounded" />
-          <button onClick={startCall} className="w-full bg-blue-600 p-4 rounded font-bold text-lg">Call Verification Officer</button>
+          <input 
+            value={fayda} 
+            onChange={(e) => setFayda(e.target.value)} 
+            placeholder="የፋይዳ ቁጥር" 
+            className="w-full p-4 mb-4 text-black rounded" 
+          />
+          <button 
+            onClick={startCall} 
+            className="w-full bg-blue-600 p-4 rounded font-bold text-lg"
+          >
+            Call Verification Officer
+          </button>
         </div>
       )}
 
@@ -134,12 +144,20 @@ const PensionerCall = () => {
             <video ref={myVideo} autoPlay muted playsInline className="absolute bottom-4 right-4 w-24 h-32 bg-gray-600 rounded-lg border-2 border-white" />
           </div>
           
-          {callStatus === "searching" && <div className="text-center text-yellow-500 font-bold p-2">ባለሙያ በመፈለግ ላይ...</div>}
+          {callStatus === "searching" && (
+            <div className="text-center text-yellow-500 font-bold p-2">ባለሙያ በመፈለግ ላይ...</div>
+          )}
 
           <div className="flex justify-between bg-gray-800 p-4 rounded-xl">
-            <button onClick={toggleCamera} className="bg-blue-600 px-5 py-3 rounded-full font-bold">Cam {cameraOn ? "ON" : "OFF"}</button>
-            <button onClick={toggleMic} className="bg-blue-600 px-5 py-3 rounded-full font-bold">Mic {micOn ? "ON" : "OFF"}</button>
-            <button onClick={endCall} className="bg-red-600 px-5 py-3 rounded-full font-bold">End Call</button>
+            <button onClick={toggleCamera} className="bg-blue-600 px-5 py-3 rounded-full font-bold">
+                Cam {cameraOn ? "ON" : "OFF"}
+            </button>
+            <button onClick={toggleMic} className="bg-blue-600 px-5 py-3 rounded-full font-bold">
+                Mic {micOn ? "ON" : "OFF"}
+            </button>
+            <button onClick={endCall} className="bg-red-600 px-5 py-3 rounded-full font-bold">
+                End Call
+            </button>
           </div>
         </div>
       )}
