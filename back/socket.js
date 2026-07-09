@@ -34,31 +34,28 @@ module.exports = (server) => {
             }
         }
 
-      socket.on("registerOfficer", async (data) => {
+// socket.js ውስጥ ያለውን registerOfficer በዚህ መንገድ ያርሙ
+const { ObjectId } = require('mongoose').Types; // ይህንን ከላይ ይጨምሩ
+
+socket.on("registerOfficer", async (data) => {
     const { officerId, name } = data;
-
-    // ተጨማሪ ማረጋገጫ (Validation)
-    if (!officerId) {
-        console.error("❌ Registration Failed: officerId is missing from client!");
-        return; 
-    }
-
-    connectedUsers.set(socket.id, { userId: officerId, role: "OFFICER" });
-    officerSockets.set(String(officerId), socket.id);
+    
+    if (!officerId) return;
 
     try {
+        // String ID ወደ ObjectId መለወጥ (ይህ validation ስህተቱን ያስወግዳል)
+        const officerObjectId = new ObjectId(officerId); 
+
         await OfficerStatus.findOneAndUpdate(
-            { officer: officerId },
+            { officer: officerObjectId }, 
             { online: true, busy: false, lastSeen: new Date() },
-            { upsert: true, new: true } // new: true መጨመር ለደህንነት ይረዳል
+            { upsert: true, new: true }
         );
-        console.log(`✅ Officer ${name} registered successfully.`);
-        io.emit("officerStatusUpdated");
+        console.log(`✅ Officer ${name} registered.`);
     } catch (err) {
-        console.error("❌ Database update failed:", err.message);
+        console.error("❌ Registration Error:", err.message);
     }
 });
-
         socket.on("registerPensioner", (data) => {
             connectedUsers.set(socket.id, { userId: data.pensionerId, role: "PENSIONER" });
             pensionerSockets.set(data.pensionerId, socket.id);
