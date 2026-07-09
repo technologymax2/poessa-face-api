@@ -2,12 +2,11 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import Peer from "simple-peer";
 import io from "socket.io-client";
 
-
-const API = process.env.REACT_APP_BACKEND_URL;
-
-const socket = io(API, {
+// .env ውስጥ ያለው አድራሻ /api ስላለው፣ ለሶኬት ግንኙነት /api ን እናስወግዳለን
+const BASE_URL = process.env.REACT_APP_API_URL.replace("/api", "");
+const socket = io(BASE_URL, { 
   transports: ["websocket", "polling"],
-  reconnection: true,
+  reconnection: true 
 });
 
 const PensionerCall = () => {
@@ -17,19 +16,21 @@ const PensionerCall = () => {
   const streamRef = useRef(null);
   const timerRef = useRef(null);
 
-  const [callStatus, setCallStatus] = useState("idle");
+  const [callStatus, setCallStatus] = useState("idle"); // idle, waiting, connected
   const [statusMessage, setStatusMessage] = useState("ለመጀመር ዝግጁ");
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [callTime, setCallTime] = useState(0);
 
+  // ካሜራን ማስጀመር
   const initializeMedia = useCallback(async () => {
     try {
       const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = media;
       if (myVideo.current) myVideo.current.srcObject = media;
     } catch (error) {
-      alert("ካሜራ ወይም ማይክሮፎን መክፈት አልተቻለም። ፍቃድ ይስጡ።");
+      console.error("Camera Error:", error);
+      alert("ካሜራ ወይም ማይክሮፎን መክፈት አልተቻለም።");
     }
   }, []);
 
@@ -66,6 +67,7 @@ const PensionerCall = () => {
     };
   }, [initializeMedia, callStatus]);
 
+  // የጥሪ ጊዜ መቁጠሪያ
   useEffect(() => {
     if (callStatus === "connected") {
       timerRef.current = setInterval(() => setCallTime((prev) => prev + 1), 1000);
@@ -81,19 +83,23 @@ const PensionerCall = () => {
   };
 
   const startCall = () => {
-    if (!streamRef.current) return alert("ካሜራ አልተገኘም");
+    if (!streamRef.current) return alert("ካሜራ ዝግጁ አይደለም");
     
     setCallStatus("waiting");
     setStatusMessage("ለሰራተኛ በመደወል ላይ...");
+    
     socket.emit("register-user", { userId: socket.id, role: "pensioner" });
 
     const peer = new Peer({ initiator: true, trickle: false, stream: streamRef.current });
+
     peer.on("signal", (signalData) => {
       socket.emit("request-agent-call", { pensionerId: socket.id, signalData });
     });
+
     peer.on("stream", (remoteStream) => {
       if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
     });
+
     peerRef.current = peer;
   };
 
@@ -115,38 +121,58 @@ const PensionerCall = () => {
   };
 
   return (
-    <div className="video-call-page">
-      <div className="video-call-container">
-        <h1 className="page-title">POESSA Video Verification</h1>
-        <div className="status-box">{statusMessage}</div>
-
-        <div className="video-layout">
-          <div className="remote-video-wrapper">
-            <h3>ሰራተኛ</h3>
-            <video ref={remoteVideo} autoPlay playsInline className="remote-video" />
-          </div>
-          <div className="local-video-wrapper">
-            <h3>እርስዎ</h3>
-            <video ref={myVideo} autoPlay muted playsInline className="local-video" />
-          </div>
-        </div>
-
-        <div className="button-group">
-          {callStatus === "idle" ? (
-            <button className="call-btn" onClick={startCall}>📞 ደውል</button>
-          ) : (
-            <button className="end-btn" onClick={endCall}>❌ ጥሪ ዝጋ</button>
-          )}
-          <button className="control-btn" onClick={toggleCamera}>
-            {cameraOn ? "📷 ካሜራ አጥፋ" : "📷 ካሜራ አብራ"}
-          </button>
-          <button className="control-btn" onClick={toggleMic}>
-            {micOn ? "🎤 ድምፅ አጥፋ" : "🎤 ድምፅ አብራ"}
-          </button>
-        </div>
-
-        <div className="call-time">⏱️ የጥሪ ጊዜ: {Math.floor(callTime / 60)}:{String(callTime % 60).padStart(2, "0")}</div>
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center p-4">
+      <h1 className="text-2xl font-bold mb-6 text-blue-400">POESSA Video Verification</h1>
+      
+      <div className="bg-gray-800 px-6 py-2 rounded-full mb-6 text-sm font-medium animate-pulse text-center">
+        {statusMessage}
       </div>
+
+     {/* የቪዲዮ ስክሪኖች */}
+      <div className="relative w-full max-w-2xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
+        
+        {/* የሰራተኛው ቪዲዮ (ዋናው) */}
+        <video 
+          ref={remoteVideo} 
+          autoPlay 
+          playsInline 
+          className="w-full h-full object-cover" 
+        />
+        
+        {/* የጡረተኛው ቪዲዮ (በግራ በኩል ከታች ተደራቢ) */}
+        <video 
+          ref={myVideo} 
+          autoPlay 
+          muted 
+          playsInline 
+          className="absolute bottom-4 left-4 w-32 h-24 object-cover rounded-lg border-2 border-white shadow-lg" 
+        />
+      </div>
+
+      <div className="mt-8 flex gap-4">
+        {callStatus === "idle" ? (
+          <button onClick={startCall} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full font-bold transition-all shadow-lg">
+            📞 ጥሪ ጀምር
+          </button>
+        ) : (
+          <button onClick={endCall} className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-bold transition-all shadow-lg">
+            ❌ ጥሪ ዝጋ
+          </button>
+        )}
+        
+        <button onClick={toggleCamera} className="bg-gray-700 hover:bg-gray-600 p-4 rounded-full transition-all">
+          {cameraOn ? "📷" : "🚫"}
+        </button>
+        <button onClick={toggleMic} className="bg-gray-700 hover:bg-gray-600 p-4 rounded-full transition-all">
+          {micOn ? "🎤" : "🔇"}
+        </button>
+      </div>
+
+      {callStatus === "connected" && (
+        <div className="mt-4 text-xl font-mono">
+          ⏱️ {Math.floor(callTime / 60)}:{String(callTime % 60).padStart(2, "0")}
+        </div>
+      )}
     </div>
   );
 };
