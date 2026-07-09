@@ -1,29 +1,35 @@
-const mongoose=require("mongoose");
+const mongoose = require("mongoose");
 
-const officerStatusSchema=new mongoose.Schema({
-
-    officer:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"FaceUser",
-        required:true,
-        unique:true
+const officerStatusSchema = new mongoose.Schema(
+  {
+    officer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FaceUser",
+      unique: true,
+      required: true,
     },
 
-    status:{
-        type:String,
-        enum:[
-            "OFFLINE",
-            "AVAILABLE",
-            "BUSY"
-        ],
-        default:"OFFLINE"
+    online: {
+      type: Boolean,
+      default: false,
     },
 
-    currentRoom:{
-        type:String,
-        default:null
-    }
+    busy: {
+      type: Boolean,
+      default: false,
+    },
 
-},{timestamps:true});
+    lastSeen: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-module.exports=mongoose.model("OfficerStatus",officerStatusSchema);
+module.exports = mongoose.model(
+  "OfficerStatus",
+  officerStatusSchema
+);
