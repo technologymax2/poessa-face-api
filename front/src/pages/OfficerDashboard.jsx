@@ -23,101 +23,58 @@ const OfficerCallCenter = () => {
     } catch (err) { console.error("Camera error:", err); }
   }, []);
 
-useEffect(() => {
-    // 1. ካሜራውን ያስጀምራል
+  useEffect(() => {
     initCamera();
 
-    // 2. ኦፊሰሩ መግባቱን ለማረጋገጥ መረጃውን ያነባል
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    
-    // ማረጋገጫ፡ ኦፊሰሩ Login ካላደረገ ወይም ID ከሌለው አይቀጥልም
-    if (!user._id) {
-      console.error("❌ ኦፊሰሩ አልተመዘገበም (User ID missing)!");
+    // 1. መረጃውን ያረጋግጡ
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!storedUser._id) {
+      console.error("❌ User ID missing! ኦፊሰሩ አልተመዘገበም");
       return;
     }
 
-    // 3. ኦፊሰሩን በሶኬት በኩል ይመዘግባል
+    // 2. ኦፊሰሩን ይመዝግቡ
     socket.emit("registerOfficer", {
-      officerId: user._id,
-      name: user.fullName
+      officerId: storedUser._id,
+      name: storedUser.fullName
     });
 
-    // 4. ጥሪዎችን ለመቀበል የሚጠባበቁ ኢቨንቶች
+    // 3. የኢቨንት ሃንድለሮች
     socket.on("incomingCall", (data) => {
-      console.log("📞 አዲስ ጥሪ መጥቷል:", data);
       setIncomingCall(data);
       setCallStatus("incoming");
     });
 
-    socket.on("offer", ({ offer, sender }) => {
-      console.log("🤝 Offer received, setting up peer...");
-      const peer = new Peer({ 
-        initiator: false, 
-        trickle: false, 
-        stream: streamRef.current 
-      });
-
-      peer.on("signal", (signal) => {
-        socket.emit("answer", { roomId: incomingCall?.roomId, answer: signal });
-      });
-
-      peer.on("stream", (stream) => {
-        if (remoteVideo.current) remoteVideo.current.srcObject = stream;
-      });
-
+    socket.on("offer", ({ offer }) => {
+      const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current });
+      peer.on("signal", (signal) => socket.emit("answer", { roomId: incomingCall.roomId, answer: signal }));
+      peer.on("stream", (stream) => { if (remoteVideo.current) remoteVideo.current.srcObject = stream; });
       peer.signal(offer);
       peerRef.current = peer;
     });
 
-    // 5. Cleanup (ሶኬቱን እና ካሜራውን ይዘጋል)
     return () => {
       socket.off("incomingCall");
       socket.off("offer");
     };
-  }, [initCamera, incomingCall?.roomId]); // አስፈላጊ ጥገኞች (dependencies)
+  }, [initCamera, incomingCall?.roomId]);
 
   const acceptCall = () => {
+    if (!incomingCall) return;
     socket.emit("acceptCall", { roomId: incomingCall.roomId, officerId: user._id });
     setCallStatus("connected");
-  };
-
-  const endCall = () => {
-    socket.emit("endCall", { roomId: incomingCall?.roomId, officerId: user._id });
-    peerRef.current?.destroy();
-    setCallStatus("idle");
-    setIncomingCall(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col items-center">
       <h2 className="text-2xl font-bold mb-4">የፖሊስ ጥሪ ማዕከል</h2>
-
-      {/* ቪዲዮ መደራረብ */}
-      <div className="relative w-full h-[400px] bg-black rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
+      <div className="relative w-full h-[400px] bg-black rounded-xl overflow-hidden border border-gray-700">
         <video ref={remoteVideo} autoPlay playsInline className="w-full h-full object-cover" />
         <video ref={myVideo} autoPlay muted playsInline className="absolute bottom-4 left-4 w-32 h-40 bg-gray-700 rounded-lg border-2 border-white object-cover" />
       </div>
-
-      {/* መቆጣጠሪያዎች */}
-      <div className="mt-6 flex gap-4">
+      <div className="mt-6">
         {callStatus === "incoming" && (
-          <button onClick={acceptCall} className="bg-green-600 px-8 py-3 rounded-full font-bold animate-bounce">
-            ጥሪ ተቀበል
-          </button>
-        )}
-        
-        {callStatus === "connected" && (
-          <button onClick={endCall} className="bg-red-600 px-8 py-3 rounded-full font-bold">
-            ጥሪ ዝጋ
-          </button>
+          <button onClick={acceptCall} className="bg-green-600 px-8 py-3 rounded-full font-bold">ጥሪ ተቀበል</button>
         )}
       </div>
-
-      <div className="mt-4 text-gray-400">
-        Status: <span className="text-blue-400">{callStatus}</span>
-      </div>
-    </div>
-  );
-};
-
-export default OfficerCallCenter;
+      <div className="mt-4 text-blue-400">Status: {callStatus}
