@@ -1,99 +1,152 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Peer from "simple-peer";
 import io from "socket.io-client";
-import axios from "axios";
+import "./VideoCallAccess.css"; // የእርስዎን የCSS ፋይል ይጠቀሙ
 
-// ከ .env የሚመጣውን አድራሻ ይጠቀሙ
-const API = process.env.REACT_APP_API_URL || "https://poessa-digital-services-1.onrender.com";
-const socket = io(API, { transports: ["websocket", "polling"] });
+const API = process.env.REACT_APP_BACKEND_URL || "https://poessa-digital-services-1.onrender.com";
+
+const socket = io(API, {
+  transports: ["websocket", "polling"],
+  reconnection: true,
+});
 
 const PensionerCall = () => {
   const myVideo = useRef(null);
   const remoteVideo = useRef(null);
   const peerRef = useRef(null);
   const streamRef = useRef(null);
+  const timerRef = useRef(null);
 
-  const [fayda, setFayda] = useState("");
   const [callStatus, setCallStatus] = useState("idle");
-  const [roomId, setRoomId] = useState("");
+  const [statusMessage, setStatusMessage] = useState("ለመጀመር ዝግጁ");
+  const [cameraOn, setCameraOn] = useState(true);
+  const [micOn, setMicOn] = useState(true);
+  const [callTime, setCallTime] = useState(0);
 
-  const initMedia = useCallback(async () => {
+  const initializeMedia = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (myVideo.current) myVideo.current.srcObject = stream;
-    } catch (err) {
-      alert("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም።");
+      const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      streamRef.current = media;
+      if (myVideo.current) myVideo.current.srcObject = media;
+    } catch (error) {
+      alert("ካሜራ ወይም ማይክሮፎን መክፈት አልተቻለም። ፍቃድ ይስጡ።");
     }
   }, []);
 
   useEffect(() => {
-    initMedia();
+    initializeMedia();
 
-    // 1. ጥሪው በተቀባይ (Officer) ሲፀድቅ
-    socket.on("callAccepted", () => {
+    socket.on("agent-accepted", (data) => {
       setCallStatus("connected");
-      // Officer ጋር ያለው Peer እንዲገናኝ እዚህም Peer መፍጠር ያስፈልጋል
+      setStatusMessage("ጥሪው ተገናኝቷል");
+      if (peerRef.current) peerRef.current.signal(data.signal);
     });
 
-    // 2. የሲግናሊንግ ክንውኖች
-    socket.on("answer", ({ answer }) => {
-      peerRef.current?.signal(answer);
+    socket.on("call-rejected", () => {
+      destroyPeer();
+      setStatusMessage("ጥሪው ውድቅ ተደርጓል");
     });
 
-    socket.on("iceCandidate", ({ candidate }) => {
-      peerRef.current?.signal(candidate);
+    socket.on("call-ended", () => {
+      destroyPeer();
+      setStatusMessage("ጥሪው ተቋርጧል");
+    });
+
+    socket.on("queue-updated", (data) => {
+      if (callStatus !== "connected") {
+        setStatusMessage(`በመጠባበቂያ ውስጥ ነዎት። ${data.waitingCalls || 0} ሰው ቀድሞዎት አለ`);
+      }
     });
 
     return () => {
-      socket.off("callAccepted");
-      socket.off("answer");
+      socket.off("agent-accepted");
+      socket.off("call-rejected");
+      socket.off("call-ended");
+      socket.off("queue-updated");
     };
-  }, [initMedia]);
+  }, [initializeMedia, callStatus]);
 
-  const startCall = async () => {
-    if (!fayda) return alert("እባክዎ የፋይዳ ቁጥር ያስገቡ");
+  useEffect(() => {
+    if (callStatus === "connected") {
+      timerRef.current = setInterval(() => setCallTime((prev) => prev + 1), 1000);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [callStatus]);
+
+  const destroyPeer = () => {
+    if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; }
+    if (remoteVideo.current) remoteVideo.current.srcObject = null;
+    setCallStatus("idle");
+    setCallTime(0);
+  };
+
+  const startCall = () => {
+    if (!streamRef.current) return alert("ካሜራ አልተገኘም");
     
-    const room = `ROOM-${Date.now()}`;
-    setRoomId(room);
-    setCallStatus("searching");
+    setCallStatus("waiting");
+    setStatusMessage("ለሰራተኛ በመደወል ላይ...");
+    socket.emit("register-user", { userId: socket.id, role: "pensioner" });
 
-    // የፔር ግንኙነት መጀመር
-    const peer = new Peer({
-      initiator: true,
-      trickle: false,
-      stream: streamRef.current,
-      config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] },
+    const peer = new Peer({ initiator: true, trickle: false, stream: streamRef.current });
+    peer.on("signal", (signalData) => {
+      socket.emit("request-agent-call", { pensionerId: socket.id, signalData });
     });
-
-    peer.on("signal", (signal) => {
-      socket.emit("offer", { roomId: room, offer: signal });
+    peer.on("stream", (remoteStream) => {
+      if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
     });
-
-    peer.on("stream", (stream) => {
-      if (remoteVideo.current) remoteVideo.current.srcObject = stream;
-    });
-
     peerRef.current = peer;
+  };
 
-    // ለሰርቨር ማሳወቅ
-    socket.emit("joinRoom", { roomId: room });
-    socket.emit("requestCall", { roomId: room, pensionerId: fayda });
+  const endCall = () => {
+    socket.emit("end-call", { pensionerId: socket.id });
+    destroyPeer();
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    setStatusMessage("ጥሪው ተዘግቷል");
+  };
+
+  const toggleCamera = () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (track) { track.enabled = !track.enabled; setCameraOn(track.enabled); }
+  };
+
+  const toggleMic = () => {
+    const track = streamRef.current?.getAudioTracks()[0];
+    if (track) { track.enabled = !track.enabled; setMicOn(track.enabled); }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white p-4">
-      {callStatus === "idle" ? (
-        <div className="flex flex-col gap-4">
-          <input value={fayda} onChange={(e) => setFayda(e.target.value)} placeholder="የፋይዳ ቁጥር" className="p-4 text-black rounded" />
-          <button onClick={startCall} className="bg-blue-600 p-4 rounded font-bold">Call Verification Officer</button>
+    <div className="video-call-page">
+      <div className="video-call-container">
+        <h1 className="page-title">POESSA Video Verification</h1>
+        <div className="status-box">{statusMessage}</div>
+
+        <div className="video-layout">
+          <div className="remote-video-wrapper">
+            <h3>ሰራተኛ</h3>
+            <video ref={remoteVideo} autoPlay playsInline className="remote-video" />
+          </div>
+          <div className="local-video-wrapper">
+            <h3>እርስዎ</h3>
+            <video ref={myVideo} autoPlay muted playsInline className="local-video" />
+          </div>
         </div>
-      ) : (
-        <div className="flex-1 relative">
-           <video ref={remoteVideo} autoPlay className="w-full h-full object-cover" />
-           <video ref={myVideo} autoPlay muted className="absolute bottom-4 right-4 w-32 h-40 bg-gray-600 rounded" />
+
+        <div className="button-group">
+          {callStatus === "idle" ? (
+            <button className="call-btn" onClick={startCall}>📞 ደውል</button>
+          ) : (
+            <button className="end-btn" onClick={endCall}>❌ ጥሪ ዝጋ</button>
+          )}
+          <button className="control-btn" onClick={toggleCamera}>
+            {cameraOn ? "📷 ካሜራ አጥፋ" : "📷 ካሜራ አብራ"}
+          </button>
+          <button className="control-btn" onClick={toggleMic}>
+            {micOn ? "🎤 ድምፅ አጥፋ" : "🎤 ድምፅ አብራ"}
+          </button>
         </div>
-      )}
+
+        <div className="call-time">⏱️ የጥሪ ጊዜ: {Math.floor(callTime / 60)}:{String(callTime % 60).padStart(2, "0")}</div>
+      </div>
     </div>
   );
 };
