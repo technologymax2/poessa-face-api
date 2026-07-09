@@ -23,30 +23,42 @@ const OfficerCallCenter = () => {
     } catch (err) { console.error("Camera error:", err); }
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
+    // 1. ካሜራውን ያስጀምራል
     initCamera();
 
-    // የኦፊሰር ID መኖሩን ያረጋግጣል
+    // 2. ኦፊሰሩ መግባቱን ለማረጋገጥ መረጃውን ያነባል
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    
+    // ማረጋገጫ፡ ኦፊሰሩ Login ካላደረገ ወይም ID ከሌለው አይቀጥልም
     if (!user._id) {
-      console.error("❌ ኦፊሰሩ አልተመዘገበም (User ID missing)");
+      console.error("❌ ኦፊሰሩ አልተመዘገበም (User ID missing)!");
       return;
     }
 
+    // 3. ኦፊሰሩን በሶኬት በኩል ይመዘግባል
     socket.emit("registerOfficer", {
       officerId: user._id,
       name: user.fullName
     });
 
+    // 4. ጥሪዎችን ለመቀበል የሚጠባበቁ ኢቨንቶች
     socket.on("incomingCall", (data) => {
+      console.log("📞 አዲስ ጥሪ መጥቷል:", data);
       setIncomingCall(data);
       setCallStatus("incoming");
     });
 
     socket.on("offer", ({ offer, sender }) => {
-      const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current });
-      
+      console.log("🤝 Offer received, setting up peer...");
+      const peer = new Peer({ 
+        initiator: false, 
+        trickle: false, 
+        stream: streamRef.current 
+      });
+
       peer.on("signal", (signal) => {
-        socket.emit("answer", { roomId: incomingCall.roomId, answer: signal });
+        socket.emit("answer", { roomId: incomingCall?.roomId, answer: signal });
       });
 
       peer.on("stream", (stream) => {
@@ -57,11 +69,12 @@ const OfficerCallCenter = () => {
       peerRef.current = peer;
     });
 
+    // 5. Cleanup (ሶኬቱን እና ካሜራውን ይዘጋል)
     return () => {
       socket.off("incomingCall");
       socket.off("offer");
     };
-  }, [initCamera, user._id, user.fullName, incomingCall]);
+  }, [initCamera, incomingCall?.roomId]); // አስፈላጊ ጥገኞች (dependencies)
 
   const acceptCall = () => {
     socket.emit("acceptCall", { roomId: incomingCall.roomId, officerId: user._id });
