@@ -128,29 +128,25 @@ const PensionerCall = () => {
         {statusMessage}
       </div>
 
-   <div className="relative w-full max-w-sm h-[65vh] bg-black rounded-3xl overflow-hidden shadow-2xl mx-auto">
-  
-  {/* 1. የሰራተኛው ቪዲዮ (Remote) - ሙሉውን ስክሪን ይሞላል */}
-  <video 
-    ref={remoteVideo} 
-    autoPlay 
-    playsInline 
-    className="w-full h-full object-cover" 
-  />
-  
-  {/* 2. የጡረተኛው ቪዲዮ (Local) - በግራ በኩል፣ ከታች በኩል፣ ጽሁፍ እንዳይሸፍን ከፍ ያለ */}
-  <div className="absolute bottom-20 left-4 w-24 h-32 rounded-xl border-2 border-white shadow-lg overflow-hidden z-10">
-    <video 
-      ref={myVideo} 
-      autoPlay 
-      muted 
-      playsInline 
-      className="w-full h-full object-cover" 
-    />
-  </div>
-
-  {/* 3. መቆጣጠሪያዎች (Buttons) - ከስር በኩል፣ የጡረተኛው ቪዲዮ በላያቸው ላይ እንዳይደራረብ ከቪዲዮው ውጭ ይሁኑ */}
-</div>
+{/* የቪዲዮ ስክሪን መደራረብ */}
+      <div className="relative w-full h-[400px] bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-700">
+        {/* የሰራተኛው ቪዲዮ (ሙሉ ስክሪን) */}
+        <video 
+          ref={remoteVideo} 
+          autoPlay 
+          playsInline 
+          className="w-full h-full object-cover" 
+        />
+        
+        {/* የጡረተኛው ቪዲዮ (በግራ በኩል ከታች ተደራቢ) */}
+        <video 
+          ref={myVideo} 
+          autoPlay 
+          muted 
+          playsInline 
+          className="absolute bottom-4 left-4 w-32 h-40 bg-gray-700 rounded-lg border-2 border-white object-cover" 
+        />
+      </div>
 
 {/* ጽሁፎቹ እና መቆጣጠሪያዎቹ እዚህ ከቪዲዮው ስክሪን በታች ይሁኑ */}
 <div className="mt-4 flex flex-col items-center">
