@@ -13,87 +13,84 @@ const PensionerCall = () => {
   const streamRef = useRef(null);
 
   const [fayda, setFayda] = useState("");
-  const [calling, setCalling] = useState(false);
   const [callStatus, setCallStatus] = useState("idle");
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [roomId, setRoomId] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState("");
 
+  // ካሜራን በአግባቡ ለማስጀመር
   const initMedia = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
       if (myVideo.current) myVideo.current.srcObject = stream;
-    } catch (err) { alert("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም"); }
+    } catch (err) {
+      console.error("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም", err);
+      alert("ካሜራ ወይም ማይክሮፎን መጠቀም አልተቻለም። እባክዎ ፍቃድ ይስጡ።");
+    }
   }, []);
 
   useEffect(() => {
     initMedia();
 
+    // ጥሪው ሲቀበል Peer-to-Peer መጀመር
     socket.on("callAccepted", () => {
-  setCallStatus("connected");
+      setCallStatus("connected");
 
-  const peer = new Peer({
-    initiator: true,
-    trickle: false,
-    stream: streamRef.current,
-    config: {
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    },
-  });
+      const peer = new Peer({
+        initiator: true,
+        trickle: false,
+        stream: streamRef.current,
+        config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] },
+      });
 
-  peer.on("signal", (signal) => {
-    socket.emit("offer", { roomId, offer: signal });
-  });
+      peer.on("signal", (signal) => {
+        socket.emit("offer", { roomId, offer: signal });
+      });
 
-  peer.on("stream", (stream) => {
-    if (remoteVideo.current) remoteVideo.current.srcObject = stream;
-  });
+      peer.on("stream", (remoteStream) => {
+        if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+      });
 
-  peerRef.current = peer;
-});
-
-    socket.on("offer", ({ offer }) => {
-      peerRef.current?.signal(offer);
+      peerRef.current = peer;
     });
 
-    socket.on("answer", ({ answer }) => {
-      peerRef.current?.signal(answer);
-    });
-
-    socket.on("iceCandidate", ({ candidate }) => {
-      peerRef.current?.signal(candidate);
-    });
-
+    socket.on("offer", ({ offer }) => peerRef.current?.signal(offer));
+    socket.on("answer", ({ answer }) => peerRef.current?.signal(answer));
+    socket.on("iceCandidate", ({ candidate }) => peerRef.current?.signal(candidate));
     socket.on("callEnded", () => window.location.reload());
-    socket.on("chatMessage", (msg) => setMessages((prev) => [...prev, msg]));
 
-    return () => socket.off();
-  }, [initMedia]);
+    return () => {
+      // ኮምፖነንቱ ሲዘጋ ሁሉንም ነገር ማጽዳት
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (peerRef.current) peerRef.current.destroy();
+      socket.off();
+    };
+  }, [initMedia, roomId]);
 
   const startCall = async () => {
     if (!fayda) return alert("እባክዎ ፋይዳ ቁጥር ያስገቡ");
+    
     const room = `ROOM-${Date.now()}`;
     setRoomId(room);
-    const currentRoom = room;
-    setCalling(true);
     setCallStatus("searching");
-    socket.emit("registerPensioner", {
-    pensionerId: fayda,
-});
 
-socket.emit("joinRoom", {
-    roomId: room
-});
-    await axios.post(`${API}/api/video/request-call`, {
-    roomId: room,
-    pensionerId: fayda
-});
+    try {
+      socket.emit("registerPensioner", { pensionerId: fayda });
+      socket.emit("joinRoom", { roomId: room });
+      
+      await axios.post(`${API}/api/video/request-call`, {
+        roomId: room,
+        pensionerId: fayda
+      });
 
-    socket.emit("requestCall", { roomId: room, pensionerId: fayda });
-
+      socket.emit("requestCall", { roomId: room, pensionerId: fayda });
+    } catch (err) {
+      alert("ጥሪ ለመጀመር አልተቻለም");
+      setCallStatus("idle");
+    }
   };
 
   const endCall = () => {
