@@ -1,53 +1,55 @@
 const mongoose = require("mongoose");
 
 const videoCallSchema = new mongoose.Schema(
-{
-    roomId:{
-        type:String,
-        required:true,
-        unique:true
+  {
+    roomId: {
+      type: String,
+      required: true,
+      unique: true,
     },
 
-    pensioner:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Pensioner",
-        required:true
+    pensionerId: {
+      type: String,
+      required: true,
     },
 
-    officer:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"FaceUser",
-        default:null
+    officer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FaceUser",
+      default: null,
     },
 
-    status:{
-        type:String,
-        enum:[
-            "WAITING",
-            "RINGING",
-            "CONNECTED",
-            "COMPLETED",
-            "REJECTED",
-            "CANCELLED"
-        ],
-        default:"WAITING"
+    status: {
+      type: String,
+      enum: [
+        "WAITING",
+        "CONNECTED",
+        "COMPLETED",
+        "CANCELLED",
+      ],
+      default: "WAITING",
     },
 
-    startedAt:Date,
-    endedAt:Date,
-
-    notes:{
-        type:String,
-        default:""
+    requestedAt: {
+      type: Date,
+      default: Date.now,
     },
 
-    renewalApproved:{
-        type:Boolean,
-        default:false
-    }
+    startedAt: Date,
 
-},
-{timestamps:true}
+    endedAt: Date,
+
+    notes: {
+      type: String,
+      default: "",
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("VideoCall",videoCallSchema);
+module.exports = mongoose.model(
+  "VideoCall",
+  videoCallSchema
+);
